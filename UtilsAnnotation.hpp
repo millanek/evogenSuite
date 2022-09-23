@@ -506,7 +506,7 @@ public:
     AccessibleGenome() {};
     
     AccessibleGenome(const string& bedFileName) {
-        if (bedFileName.empty()) {
+        if (!bedFileName.empty()) {
             std::ifstream* accessibleGenomeBedFile = new std::ifstream(bedFileName);
             std::cerr << "Loading the accessible genome annotation" << std::endl;
             BedFeatureMap = loadBedFeatureMap(accessibleGenomeBedFile, false);
