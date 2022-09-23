@@ -147,34 +147,52 @@ public:
     }
     
     
-    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const double thisWindowStart, const AccessibleGenome* ag) {
+    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const double currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd) {
         
-        int thisWindowEnd = thisWindowStart + physicalWindowSize;
-        int accessibleInThisWindow;
-        if (ag->initialised) {
-            accessibleInThisWindow = ag->getAccessibleBPinRegion(chr, thisWindowStart, thisWindowEnd);
+        if (thisWindowStart < currentSNPcoord) { // As long as the current SNP coord is more than the previous (i.e., we are on the same chromosome; I should check this properly
+            int thisWindowEnd = thisWindowStart + physicalWindowSize;
+            int accessibleInThisWindow;
+            if (ag->initialised) {
+                accessibleInThisWindow = ag->getAccessibleBPinRegion(chr, thisWindowStart, thisWindowEnd);
+            } else {
+                accessibleInThisWindow = physicalWindowSize;
+            }
+            
+            
+            double thisFixedWindowFst = 0; double thisFixedWindowDxy = 0;
+            double thisFixedWindowPi1 = 0; double thisFixedWindowPi2 = 0;
+            int nFwSNPs = (int)resultsPhysicalWindows[pairNumber][iFstNum].size();
+            if (nFwSNPs > 0) {
+                thisFixedWindowFst = calculateFst(resultsPhysicalWindows[pairNumber][iFstNum], resultsPhysicalWindows[pairNumber][iFstDenom]);
+                thisFixedWindowDxy = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iDxy], accessibleInThisWindow);
+                thisFixedWindowPi1 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi1], accessibleInThisWindow);
+                thisFixedWindowPi2 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi2], accessibleInThisWindow);
+                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << thisFixedWindowFst << "\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow << std::endl;
+            } else { // If this physical window did not have any SNPs, then Fst="NA"
+                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\tNA\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow << std::endl;
+            }
+            
+            for (int i = 0; i < resultsPhysicalWindows[pairNumber].size(); i++) {
+                resultsPhysicalWindows[pairNumber][i].clear();
+            }
+            
+            thisWindowStart = thisWindowStart + physicalWindowSize;
+            thisWindowEnd = thisWindowEnd + physicalWindowSize;
+            
+            while (!(thisWindowStart < currentSNPcoord && thisWindowEnd > currentSNPcoord)) {
+                if (ag->initialised) {
+                    accessibleInThisWindow = ag->getAccessibleBPinRegion(chr, thisWindowStart, thisWindowEnd);
+                } else {
+                    accessibleInThisWindow = physicalWindowSize;
+                }
+                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << accessibleInThisWindow << std::endl;
+                thisWindowStart = thisWindowStart + physicalWindowSize;
+                thisWindowEnd = thisWindowEnd + physicalWindowSize;
+            }
         } else {
-            accessibleInThisWindow = physicalWindowSize;
+            thisWindowStart = 0;
+            thisWindowEnd = 0 + physicalWindowSize;
         }
-        
-        
-        double thisFixedWindowFst = 0; double thisFixedWindowDxy = 0;
-        double thisFixedWindowPi1 = 0; double thisFixedWindowPi2 = 0;
-        int nFwSNPs = (int)resultsPhysicalWindows[pairNumber][iFstNum].size();
-        if (nFwSNPs > 0) {
-            thisFixedWindowFst = calculateFst(resultsPhysicalWindows[pairNumber][iFstNum], resultsPhysicalWindows[pairNumber][iFstDenom]);
-            thisFixedWindowDxy = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iDxy], accessibleInThisWindow);
-            thisFixedWindowPi1 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi1], accessibleInThisWindow);
-            thisFixedWindowPi2 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi2], accessibleInThisWindow);
-            *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << thisFixedWindowFst << "\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow << std::endl;
-        } else { // If this physical window did not have any SNPs, then Fst="NA"
-            *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\tNA\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow << std::endl;
-        }
-        
-        for (int i = 0; i < resultsPhysicalWindows[pairNumber].size(); i++) {
-            resultsPhysicalWindows[pairNumber][i].clear();
-        }
-
     }
     
     

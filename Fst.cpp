@@ -97,7 +97,7 @@ int fstMain(int argc, char** argv) {
     string line; std::vector<string> fields;
     int currentWindowStart = 0; int currentWindowEnd = currentWindowStart + opt::physicalWindowSize;
     string chr; string coord; double coordDouble;
-    int totalVariantNumber = 0; int reportProgressEvery = 100000; std::clock_t startTime = std::clock();
+    int totalVariantNumber = 0; int reportProgressEvery = 10000; std::clock_t startTime = std::clock();
     while (getline(*vcfFile, line)) {
         if (line[0] == '#' && line[1] == '#') {
             
@@ -154,14 +154,7 @@ int fstMain(int argc, char** argv) {
                 
                 // Check if we are still in the same physical window...
                 if (coordDouble > currentWindowEnd || coordDouble < currentWindowStart) {
-                    
-                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, chr, currentWindowStart, ag);
-                    
-                    if (coordDouble > currentWindowEnd) {
-                        currentWindowStart = currentWindowStart + opt::physicalWindowSize; currentWindowEnd = currentWindowEnd + opt::physicalWindowSize;
-                    } else if (coordDouble < currentWindowStart) {
-                        currentWindowStart = 0; currentWindowEnd = 0 + opt::physicalWindowSize;
-                    }
+                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, chr, coordDouble, ag, currentWindowStart, currentWindowEnd);
                 }
                 
             }
