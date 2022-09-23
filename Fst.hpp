@@ -65,11 +65,12 @@ public:
             std::cerr << "ERROR: The file " << FstPairsFileName << " could not be opened\n";
             exit(1);
         }
-        std::cerr << "Calculating statistics for the pairs:\n";
+        std::cout << "Calculating statistics for the pairs:\n";
         string line;
         while (getline(*FstPairsFile,line)) {
             // std::cerr << line << std::endl;
             std::vector<string> twoPops = split(line, '\t'); assert(twoPops.size() == 2);
+            print_vector(twoPops, std::cout);
             std::ofstream* outFile = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_Fst_" + runName + "_" + numToString(windowSize) + "_" + numToString(windowStep) + ".txt");
             std::ofstream* outFileFixedWindow = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_" +  "_Fst_" + runName + "_FW" + numToString(fixedWindowSize) + ".txt");
             

@@ -19,7 +19,7 @@ public:
     
     PBStrios(const string& PBStriosFileName, const string& runName, const int windowSize, const int windowStep, const int fixedWindowSize, const bool bAnnotationPresent) {
         std::ifstream* PBStriosFile = new std::ifstream(PBStriosFileName.c_str());
-        if (!PBStriosFile) {
+        if (PBStriosFile->fail()) {
             std::cerr << "ERROR: The file " << PBStriosFile << " could not be opened\n";
             exit(1);
         }

@@ -499,7 +499,7 @@ public:
     
     SetInformation(string setsFileName) {
         std::ifstream* setsFile = new std::ifstream(setsFileName.c_str());
-        if (!setsFile) {
+        if (setsFile->fail()) {
             std::cerr << "ERROR: The file " << setsFileName << " could not be opened\n";
             exit(1);
         }
