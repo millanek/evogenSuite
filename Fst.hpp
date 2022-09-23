@@ -179,7 +179,7 @@ public:
             thisWindowStart = thisWindowStart + physicalWindowSize;
             thisWindowEnd = thisWindowEnd + physicalWindowSize;
             
-            while (!(thisWindowStart < currentSNPcoord && thisWindowEnd > currentSNPcoord)) {
+            while (!(thisWindowStart <= currentSNPcoord && thisWindowEnd > currentSNPcoord)) {
                 if (ag->initialised) {
                     accessibleInThisWindow = ag->getAccessibleBPinRegion(chr, thisWindowStart, thisWindowEnd);
                 } else {
