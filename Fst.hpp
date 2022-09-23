@@ -61,7 +61,7 @@ public:
     
     FstPairs(const string& FstPairsFileName, const string& runName, const int windowSize, const int windowStep, const int fixedWindowSize, const bool bAnnotationPresent) {
         std::ifstream* FstPairsFile = new std::ifstream(FstPairsFileName.c_str());
-        if (!FstPairsFile) {
+        if (FstPairsFile->fail()) {
             std::cerr << "ERROR: The file " << FstPairsFileName << " could not be opened\n";
             exit(1);
         }
