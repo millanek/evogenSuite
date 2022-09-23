@@ -150,7 +150,6 @@ public:
     void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const double currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd) {
         
         if (thisWindowStart < currentSNPcoord) { // As long as the current SNP coord is more than the previous (i.e., we are on the same chromosome; I should check this properly
-            int thisWindowEnd = thisWindowStart + physicalWindowSize;
             int accessibleInThisWindow;
             if (ag->initialised) {
                 accessibleInThisWindow = ag->getAccessibleBPinRegion(chr, thisWindowStart, thisWindowEnd);
