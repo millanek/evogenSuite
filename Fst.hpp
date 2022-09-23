@@ -61,6 +61,11 @@ public:
     
     FstPairs(const string& FstPairsFileName, const string& runName, const int windowSize, const int windowStep, const int fixedWindowSize, const bool bAnnotationPresent) {
         std::ifstream* FstPairsFile = new std::ifstream(FstPairsFileName.c_str());
+        if (!FstPairsFile) {
+            std::cerr << "ERROR: The file " << FstPairsFileName << " could not be opened\n";
+            exit(1);
+        }
+        std::cerr << "Calculating statistics for the pairs:\n";
         string line;
         while (getline(*FstPairsFile,line)) {
             // std::cerr << line << std::endl;

@@ -499,6 +499,10 @@ public:
     
     SetInformation(string setsFileName) {
         std::ifstream* setsFile = new std::ifstream(setsFileName.c_str());
+        if (!setsFile) {
+            std::cerr << "ERROR: The file " << setsFileName << " could not be opened\n";
+            exit(1);
+        }
         string line;
         while (getline(*setsFile, line)) {
             // std::cerr << line << std::endl;
