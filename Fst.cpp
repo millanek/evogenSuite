@@ -154,6 +154,9 @@ int fstMain(int argc, char** argv) {
                 
                 // Check if we are still in the same physical window...
                 if (coordDouble > currentWindowEnd || coordDouble < currentWindowStart) {
+                    std::cerr << "currentWindowStart: " << currentWindowStart << "\n";
+                    std::cerr << "currentWindowEnd: " << currentWindowEnd << "\n";
+                    std::cerr << "coordDouble: " << coordDouble << "\n";
                     p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, chr, coordDouble, ag, currentWindowStart, currentWindowEnd);
                 }
                 
