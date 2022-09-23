@@ -9,6 +9,7 @@
 #define UtilsIUPAC_hpp
 
 #include <iostream>
+#include "UtilsGeneral.hpp"
 
 // IUPAC alphabet tools
 
