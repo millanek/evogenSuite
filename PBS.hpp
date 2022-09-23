@@ -31,7 +31,7 @@ public:
             std::ofstream* outFileFixedWindow = new std::ofstream(threePops[0] + "_" + threePops[1] + "_" + threePops[2]+ "_PBS_" + runName + "_FW" + numToString(fixedWindowSize) + ".txt");
             *outFile << "chr\twStart\twEnd\t" << threePops[0] << "\t" << threePops[1] << "\t" << threePops[2] << std::endl;
             *outFileFixedWindow << "chr\twStart\twEnd\t" << threePops[0] << "\t" << threePops[1] << "\t" << threePops[2] << "\t" << "nFwSNPs1" << "\t" << "nFwSNPs2" << "\t" << "nFwSNPs3" << std::endl;
-            //outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
+            outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
             outFiles.push_back(outFile); outFilesFixedWindow.push_back(outFileFixedWindow);
             if (bAnnotationPresent) {
                 std::ofstream* outFileGenes = new std::ofstream(threePops[0] + "_" + threePops[1] + "_" + threePops[2]+ "_PBSGenes_" + runName + "_" + numToString(windowSize) + "_" + numToString(windowStep) + ".txt");

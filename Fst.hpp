@@ -65,7 +65,7 @@ public:
             std::cerr << "ERROR: The file " << FstPairsFileName << " could not be opened\n";
             exit(1);
         }
-        std::cout << "Calculating statistics for the pairs:\n";
+        std::cout << "\nCalculating statistics for the set pair(s):\n";
         string line;
         while (getline(*FstPairsFile,line)) {
             // std::cerr << line << std::endl;
@@ -76,7 +76,7 @@ public:
             
             string fstOufileHeader = "chr\twStart\twEnd\tFst\tDxy\t" + twoPops[0] + "_pi\t" + twoPops[1] + "_pi\tAccessible_bp\n";
             *outFile << fstOufileHeader; *outFileFixedWindow << fstOufileHeader;
-            //outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
+            outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
             outFiles.push_back(outFile); outFilesFixedWindow.push_back(outFileFixedWindow);
       
             /*     if (bAnnotationPresent) {

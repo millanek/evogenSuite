@@ -511,6 +511,7 @@ public:
             std::cerr << "Loading the accessible genome annotation" << std::endl;
             BedFeatureMap = loadBedFeatureMap(accessibleGenomeBedFile, false);
             std::cerr << "Done" << std::endl;
+            initialised = true;
         }
     }
     
