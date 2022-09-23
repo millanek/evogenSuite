@@ -170,7 +170,7 @@ public:
             *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\tNA\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow << std::endl;
         }
         
-        for (int i = 0; i < resultsPhysicalWindows.size(); i++) {
+        for (int i = 0; i < resultsPhysicalWindows[pairNumber].size(); i++) {
             resultsPhysicalWindows[pairNumber][i].clear();
         }
 
