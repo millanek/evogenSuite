@@ -77,7 +77,7 @@ int AFmain(int argc, char** argv) {
                 refAllele.clear(); refAllele.shrink_to_fit(); altAllele.clear(); altAllele.shrink_to_fit();
                 genotypes.clear(); genotypes.shrink_to_fit(); continue;
             }
-            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
+            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size(), chr, coord);
             c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
             // std::cerr << "Here:" << totalVariantNumber << std::endl;
 

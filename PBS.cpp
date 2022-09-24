@@ -108,7 +108,7 @@ int PBSmain(int argc, char** argv) {
                 genotypes.clear(); genotypes.shrink_to_fit(); continue;
             }
             
-            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
+            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size(), chr, coord);
             c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
             genotypes.clear(); genotypes.shrink_to_fit();
             // std::cerr << "Here:" << totalVariantNumber << std::endl;
