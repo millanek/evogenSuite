@@ -96,7 +96,7 @@ int fstMain(int argc, char** argv) {
     std::istream* vcfFile = createReader(opt::vcfFile.c_str());
     string line; std::vector<string> fields;
     int currentWindowStart = 0; int currentWindowEnd = currentWindowStart + opt::physicalWindowSize;
-    string chr; string coord; int coordInt;
+    string chr; string coord; int coordInt; double coordDouble;
     int totalVariantNumber = 0; int reportProgressEvery = 10000; std::clock_t startTime = std::clock();
     while (getline(*vcfFile, line)) {
         if (line[0] == '#' && line[1] == '#') {
@@ -113,6 +113,7 @@ int fstMain(int argc, char** argv) {
             //std::cerr << "Variant N:" << totalVariantNumber << std::endl;
             
             fields = split(line, '\t'); chr = fields[0]; coord = fields[1]; coordInt = atoi(coord.c_str());
+            coordDouble = stringToDouble(coord);
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             
             // Only consider biallelic SNPs
@@ -126,8 +127,9 @@ int fstMain(int argc, char** argv) {
                 genotypes.clear(); genotypes.shrink_to_fit(); continue;
             }
             
-            if (coordInt >= 3447835) {
-                std::cerr << "coordDouble: " << coordInt << std::endl;
+            if (coordDouble >= 3447835) {
+                std::cerr << "coordDouble: " << coordDouble << std::endl;
+                std::cerr << "coordInt: " << coordInt << std::endl;
             }
             
             GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
