@@ -127,7 +127,7 @@ private:
 
 class GeneralSetCountsWithComplements : public GeneralSetCounts {
     public:
-    GeneralSetCountsWithComplements(const std::map<string, std::vector<size_t>>& setsToPosMap, const int nSamples) : GeneralSetCounts(setsToPosMap,nSamples) {
+    GeneralSetCountsWithComplements(const std::map<string, std::vector<size_t>>& setsToPosMap, const int nSamples, const string thisSNPchr, const string coord) : GeneralSetCounts(setsToPosMap,nSamples, thisSNPchr, coord) {
         for(std::map<string, std::vector<size_t>>::const_iterator it = setsToPosMap.begin(); it != setsToPosMap.end(); ++it) {
             setAAFsComplement[it->first] = -1.0; setDAFsComplement[it->first] = -1.0; setAlleleCountsComplement[it->first] = 0;
         }
