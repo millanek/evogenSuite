@@ -12,6 +12,7 @@
 // - Make a possibility of using annotation (make consistent with PBS?)
 // - Deal with ancestral sets
 // - Get a bed file with regions above a certain level
+// - If a population has entirely missing data for a SNP, pi will be 0
 
 #include "Fst.hpp"
 
@@ -127,23 +128,17 @@ int fstMain(int argc, char** argv) {
                 genotypes.clear(); genotypes.shrink_to_fit(); continue;
             }
             
-            if (coordDouble >= 3447835) {
+            /*if (coordDouble >= 3447835) {
                 std::cerr << "coordDouble: " << coordDouble << std::endl;
                 std::cerr << "coordInt: " << coordInt << std::endl;
-            }
+            }*/
             
             GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size(), chr, coord);
-            if (coordInt >= 3447835) {
-                std::cerr << "Counts created: " << std::endl;
-            }
+            // if (coordInt >= 3447835) std::cerr << "Counts created: " << std::endl;
             c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
-            if (coordInt >= 3447835) {
-                std::cerr << "Summarised all counts: " << std::endl;
-            }
+            // if (coordInt >= 3447835) std::cerr << "Summarised all counts: " << std::endl;
             c->calculatePiPerVariantPerSet();
-            if (coordInt >= 3447835) {
-                std::cerr << "Got pi for all populations: " << std::endl;
-            }
+            // if (coordInt >= 3447835) std::cerr << "Got pi for all populations: " << std::endl;
             genotypes.clear(); genotypes.shrink_to_fit();
             
             for (int i = 0; i != p.pairs.size(); i++) {
@@ -155,10 +150,10 @@ int fstMain(int argc, char** argv) {
                 else continue;
                 int n1 = c->setAlleleCounts.at(set1); int n2 = c->setAlleleCounts.at(set2);
                 
-                if (coordInt >= 3447835) {
+            /*    if (coordInt >= 3447835) {
                     std::cerr << "p1: " << p1 << std::endl;
                     std::cerr << "p2: " << p2 << std::endl;
-                }
+                }*/
                 
                 double thisSNPFstNumerator = calculateFstNumerator(p1, p2, n1, n2);
                 double thisSNPFstDenominator = calculateFstDenominator(p1, p2);
