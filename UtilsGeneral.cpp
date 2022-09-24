@@ -88,6 +88,10 @@ void GeneralSetCounts::calculatePiPerVariantPerSet() {
         std::vector<int> thisSetAlleles = it->second;
         int n = (int) thisSetAlleles.size();
         double piSum = 0;
+        if (posInt >= 3447835) {
+            std::cerr << "thisSet: " << thisSet << std::endl;
+            std::cerr << "n: " << n << std::endl;
+        }
         for (std::vector<std::string>::size_type i = 0; i < n - 1; i++) {
             for (std::vector<std::string>::size_type j = i + 1; j < n; j++) {
                 if (thisSetAlleles[i] != thisSetAlleles[j]) piSum++;

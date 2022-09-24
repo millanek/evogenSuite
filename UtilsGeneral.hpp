@@ -74,7 +74,9 @@ template <typename T> void reset_matrix_to_zero(std::vector<std::vector<T> >& m)
 
 class GeneralSetCounts {
 public:
-    GeneralSetCounts(const std::map<string, std::vector<size_t>>& setsToPosMap, const int nSamples) : overall(0), likelihoodsProbabilitiesType(LikelihoodsProbabilitiesAbsent) {
+    GeneralSetCounts(const std::map<string, std::vector<size_t>>& setsToPosMap, const int nSamples, const string thisSNPchr, const string coord) : overall(0), likelihoodsProbabilitiesType(LikelihoodsProbabilitiesAbsent) {
+        chr = thisSNPchr;
+        posInt = atoi(coord.c_str());
         for(std::map<string, std::vector<size_t>>::const_iterator it = setsToPosMap.begin(); it != setsToPosMap.end(); ++it) {
             setRefCounts[it->first] = 0; setAltCounts[it->first] = 0; setAlleleCounts[it->first] = 0;
             setAlleleProbCounts[it->first] = 0;
@@ -98,6 +100,8 @@ public:
     
     void calculatePiPerVariantPerSet();
     
+    string chr;
+    int posInt;
     int overall; int AAint;
     std::map<string,int> setRefCounts;
     std::map<string,int> setAltCounts;

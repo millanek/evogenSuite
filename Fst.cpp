@@ -132,7 +132,7 @@ int fstMain(int argc, char** argv) {
                 std::cerr << "coordInt: " << coordInt << std::endl;
             }
             
-            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
+            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size(), chr, coord);
             if (coordInt >= 3447835) {
                 std::cerr << "Counts created: " << std::endl;
             }
