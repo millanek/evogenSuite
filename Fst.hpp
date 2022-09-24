@@ -177,9 +177,6 @@ public:
             
             thisWindowStart = thisWindowStart + physicalWindowSize;
             thisWindowEnd = thisWindowEnd + physicalWindowSize;
-            std::cerr << "thisWindowStart: " << thisWindowStart << "\n";
-            std::cerr << "thisWindowEnd: " << thisWindowEnd << "\n";
-            std::cerr << "currentSNPcoord: " << currentSNPcoord << "\n";
             
             while (!(thisWindowStart <= currentSNPcoord && thisWindowEnd > currentSNPcoord)) {
                 if (ag->initialised) {

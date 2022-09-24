@@ -114,6 +114,9 @@ int fstMain(int argc, char** argv) {
             
             fields = split(line, '\t'); chr = fields[0]; coord = fields[1]; coordDouble = stringToDouble(coord);
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
+            if (coordDouble > 3430000) {
+                std::cerr << "coordDouble: " << coordDouble << std::endl;
+            }
             
             // Only consider biallelic SNPs
             string refAllele = fields[3]; string altAllele = fields[4]; bool ignoreSite = false;
@@ -154,9 +157,6 @@ int fstMain(int argc, char** argv) {
                 
                 // Check if we are still in the same physical window...
                 if (coordDouble > currentWindowEnd || coordDouble < currentWindowStart) {
-                    std::cerr << "currentWindowStart: " << currentWindowStart << "\n";
-                    std::cerr << "currentWindowEnd: " << currentWindowEnd << "\n";
-                    std::cerr << "coordDouble: " << coordDouble << "\n";
                     p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, chr, coordDouble, ag, currentWindowStart, currentWindowEnd);
                 }
                 
