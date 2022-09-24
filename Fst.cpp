@@ -114,9 +114,6 @@ int fstMain(int argc, char** argv) {
             
             fields = split(line, '\t'); chr = fields[0]; coord = fields[1]; coordInt = atoi(coord.c_str());
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
-            if (coordInt > 3430000) {
-                std::cerr << "coordDouble: " << coordInt << std::endl;
-            }
             
             // Only consider biallelic SNPs
             string refAllele = fields[3]; string altAllele = fields[4]; bool ignoreSite = false;
@@ -134,13 +131,23 @@ int fstMain(int argc, char** argv) {
             c->calculatePiPerVariantPerSet();
             genotypes.clear(); genotypes.shrink_to_fit();
             
+            if (coordInt >= 3447835) {
+                std::cerr << "coordDouble: " << coordInt << std::endl;
+            }
+            
             for (int i = 0; i != p.pairs.size(); i++) {
                 string set1 = p.pairs[i][0]; string set2 = p.pairs[i][1];
+                
                 
                 double p1 = c->setAAFs.at(set1); double p2 = c->setAAFs.at(set2);
                 if (bPairInformativeThisSNP(p1,p2)) p.usedVars[i]++;
                 else continue;
                 int n1 = c->setAlleleCounts.at(set1); int n2 = c->setAlleleCounts.at(set2);
+                
+                if (coordInt >= 3447835) {
+                    std::cerr << "p1: " << p1 << std::endl;
+                    std::cerr << "p2: " << p2 << std::endl;
+                }
                 
                 double thisSNPFstNumerator = calculateFstNumerator(p1, p2, n1, n2);
                 double thisSNPFstDenominator = calculateFstDenominator(p1, p2);
