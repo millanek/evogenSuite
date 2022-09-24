@@ -109,14 +109,14 @@ public:
     
     void summariseAndOutputPerGene(string geneName);
     
-    void addSNPresultsToWindows(const int pairNumber, const double thisSNPFstNumerator, const double thisSNPFstDenominator, const double thisSNPDxy, const double thisSNPpi1, const double thisSNPpi2, const double SNPcoordinate) {
+    void addSNPresultsToWindows(const int pairNumber, const double thisSNPFstNumerator, const double thisSNPFstDenominator, const double thisSNPDxy, const double thisSNPpi1, const double thisSNPpi2, const int SNPcoordinate) {
         
         resultsSNPwindows[pairNumber][0].push_back(thisSNPFstNumerator); resultsSNPwindows[pairNumber][0].pop_front();
         resultsSNPwindows[pairNumber][1].push_back(thisSNPFstDenominator); resultsSNPwindows[pairNumber][1].pop_front();
         resultsSNPwindows[pairNumber][2].push_back(thisSNPDxy); resultsSNPwindows[pairNumber][2].pop_front();
         resultsSNPwindows[pairNumber][3].push_back(thisSNPpi1); resultsSNPwindows[pairNumber][3].pop_front();
         resultsSNPwindows[pairNumber][4].push_back(thisSNPpi2); resultsSNPwindows[pairNumber][4].pop_front();
-        resultsSNPwindows[pairNumber][5].push_back(SNPcoordinate); resultsSNPwindows[pairNumber][5].pop_front();
+        resultsSNPwindows[pairNumber][5].push_back((double)SNPcoordinate); resultsSNPwindows[pairNumber][5].pop_front();
         
         resultsPhysicalWindows[pairNumber][0].push_back(thisSNPFstNumerator);
         resultsPhysicalWindows[pairNumber][1].push_back(thisSNPFstDenominator);
@@ -125,7 +125,7 @@ public:
         resultsPhysicalWindows[pairNumber][4].push_back(thisSNPpi2);
     }
     
-    void finalizeAndOutputSNPwindow(const int pairNumber, const string chr, const double currentSNPcoordinate, const AccessibleGenome* ag) {
+    void finalizeAndOutputSNPwindow(const int pairNumber, const string chr, const int currentSNPcoordinate, const AccessibleGenome* ag) {
         // The starting coordinate of this window
         int startCoord = (int)resultsSNPwindows[pairNumber][iCoord][0];
         if (startCoord < currentSNPcoordinate) {
@@ -147,7 +147,7 @@ public:
     }
     
     
-    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const double currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd) {
+    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const int currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd) {
         
         if (thisWindowStart < currentSNPcoord) { // As long as the current SNP coord is more than the previous (i.e., we are on the same chromosome; I should check this properly
             int accessibleInThisWindow;

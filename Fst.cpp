@@ -96,7 +96,7 @@ int fstMain(int argc, char** argv) {
     std::istream* vcfFile = createReader(opt::vcfFile.c_str());
     string line; std::vector<string> fields;
     int currentWindowStart = 0; int currentWindowEnd = currentWindowStart + opt::physicalWindowSize;
-    string chr; string coord; double coordDouble;
+    string chr; string coord; int coordInt;
     int totalVariantNumber = 0; int reportProgressEvery = 10000; std::clock_t startTime = std::clock();
     while (getline(*vcfFile, line)) {
         if (line[0] == '#' && line[1] == '#') {
@@ -112,10 +112,10 @@ int fstMain(int argc, char** argv) {
             
             //std::cerr << "Variant N:" << totalVariantNumber << std::endl;
             
-            fields = split(line, '\t'); chr = fields[0]; coord = fields[1]; coordDouble = stringToDouble(coord);
+            fields = split(line, '\t'); chr = fields[0]; coord = fields[1]; coordInt = atoi(coord.c_str());
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
-            if (coordDouble > 3430000) {
-                std::cerr << "coordDouble: " << coordDouble << std::endl;
+            if (coordInt > 3430000) {
+                std::cerr << "coordDouble: " << coordInt << std::endl;
             }
             
             // Only consider biallelic SNPs
@@ -148,16 +148,16 @@ int fstMain(int argc, char** argv) {
                 double thisSNPpi1 = c->piPerVariantPerSet.at(set1);
                 double thisSNPpi2 = c->piPerVariantPerSet.at(set2);
                 
-                p.addSNPresultsToWindows(i,thisSNPFstNumerator,thisSNPFstDenominator, thisSNPDxy, thisSNPpi1,thisSNPpi2,coordDouble);
+                p.addSNPresultsToWindows(i,thisSNPFstNumerator,thisSNPFstDenominator, thisSNPDxy, thisSNPpi1,thisSNPpi2,coordInt);
                 
                 
                 if (p.usedVars[i] > opt::windowSize && (p.usedVars[i] % opt::windowStep == 0)) {
-                    p.finalizeAndOutputSNPwindow(i, chr, coordDouble, ag);
+                    p.finalizeAndOutputSNPwindow(i, chr, coordInt, ag);
                 }
                 
                 // Check if we are still in the same physical window...
-                if (coordDouble > currentWindowEnd || coordDouble < currentWindowStart) {
-                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, chr, coordDouble, ag, currentWindowStart, currentWindowEnd);
+                if (coordInt > currentWindowEnd || coordInt < currentWindowStart) {
+                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, chr, coordInt, ag, currentWindowStart, currentWindowEnd);
                 }
                 
             }
