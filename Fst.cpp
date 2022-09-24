@@ -126,14 +126,23 @@ int fstMain(int argc, char** argv) {
                 genotypes.clear(); genotypes.shrink_to_fit(); continue;
             }
             
-            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
-            c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
-            c->calculatePiPerVariantPerSet();
-            genotypes.clear(); genotypes.shrink_to_fit();
-            
             if (coordInt >= 3447835) {
                 std::cerr << "coordDouble: " << coordInt << std::endl;
             }
+            
+            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
+            if (coordInt >= 3447835) {
+                std::cerr << "Counts created: " << std::endl;
+            }
+            c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
+            if (coordInt >= 3447835) {
+                std::cerr << "Summarised all counts: " << std::endl;
+            }
+            c->calculatePiPerVariantPerSet();
+            if (coordInt >= 3447835) {
+                std::cerr << "Got pi for all populations: " << std::endl;
+            }
+            genotypes.clear(); genotypes.shrink_to_fit();
             
             for (int i = 0; i != p.pairs.size(); i++) {
                 string set1 = p.pairs[i][0]; string set2 = p.pairs[i][1];
