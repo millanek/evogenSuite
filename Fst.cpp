@@ -97,7 +97,7 @@ int fstMain(int argc, char** argv) {
     std::istream* vcfFile = createReader(opt::vcfFile.c_str());
     string line; std::vector<string> fields;
     int currentWindowStart = 0; int currentWindowEnd = currentWindowStart + opt::physicalWindowSize;
-    string chr; string coord; 
+    string chr; string coord;
     int totalVariantNumber = 0; int reportProgressEvery = 10000; std::clock_t startTime = std::clock();
     while (getline(*vcfFile, line)) {
         if (line[0] == '#' && line[1] == '#') {
@@ -173,6 +173,8 @@ int fstMain(int argc, char** argv) {
                 }
                 
             }
+            
+            delete c;
         }
     }
     
