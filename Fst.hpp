@@ -173,6 +173,7 @@ public:
             
             for (int i = 0; i < resultsPhysicalWindows[pairNumber].size(); i++) {
                 resultsPhysicalWindows[pairNumber][i].clear();
+                resultsPhysicalWindows[pairNumber][i].shrink_to_fit();
             }
             
             thisWindowStart = thisWindowStart + physicalWindowSize;

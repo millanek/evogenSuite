@@ -319,8 +319,8 @@ void MultiallelicCounts::getMultiallelicCounts(const std::vector<std::string>& g
         else if (genotypes[i][0] == starPos) { missingHaplotypesStar[2*i] = 1; }
         else haplotypeVariants[2*i] = genotypes[i][0];
         
-        if (genotypes[i][1] == '.')  { missingHaplotypesDot[(2*i)+1] = 1;}
-        else if (genotypes[i][1] == starPos) { missingHaplotypesStar[(2*i)+1] = 1; }
+        if (genotypes[i][2] == '.')  { missingHaplotypesDot[(2*i)+1] = 1;}
+        else if (genotypes[i][2] == starPos) { missingHaplotypesStar[(2*i)+1] = 1; }
         else haplotypeVariants[(2*i)+1] = genotypes[i][2];
         
         if (missingIndividualsAny[i] == 0 && genotypes[i][0] != genotypes[i][2]) {
