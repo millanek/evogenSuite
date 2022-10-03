@@ -11,7 +11,7 @@
 // Works only on biallelic markers
 void GeneralSetCounts::getSetVariantCounts(const std::vector<std::string>& genotypes, const std::map<size_t, string>& posToSpeciesMap, const VariantInfo& v) {
     
-    // std::cerr << fields[0] << "\t" << fields[1] << std::endl;
+    
     
     // Go through the genotypes and record all SNP alleles
     for (std::vector<std::string>::size_type i = 0; i != genotypes.size(); i++) {
@@ -19,11 +19,11 @@ void GeneralSetCounts::getSetVariantCounts(const std::vector<std::string>& genot
         std::string species = posToSpeciesMap.at(i);
         int firstAllele = genotypes[i][0] - '0'; int secondAllele = genotypes[i][2] - '0';
         bool firstAlleleSNP = false; bool secondAlleleSNP = false;
-        if (std::find(v.SNPaltAlleleIndices.begin(), v.SNPaltAlleleIndices.end(), firstAllele) != v.SNPaltAlleleIndices.end()) {
+        if (std::find(v.SNPAlleleIndices.begin(), v.SNPAlleleIndices.end(), firstAllele) != v.SNPAlleleIndices.end()) {
             setAlleles.at(species).push_back(firstAllele);
             firstAlleleSNP = true;
         }
-        if (std::find(v.SNPaltAlleleIndices.begin(), v.SNPaltAlleleIndices.end(), secondAllele) != v.SNPaltAlleleIndices.end()) {
+        if (std::find(v.SNPAlleleIndices.begin(), v.SNPAlleleIndices.end(), secondAllele) != v.SNPAlleleIndices.end()) {
             setAlleles.at(species).push_back(secondAllele);
             secondAlleleSNP = true;
         }
@@ -34,17 +34,27 @@ void GeneralSetCounts::getSetVariantCounts(const std::vector<std::string>& genot
             if (firstAllele != secondAllele) setHetCounts.at(species)++;
         }
     }
+    //std::cerr << "Went through genotypes" << std::endl;
     
     
     // it->second - A vector with all alleles for this species
     for(std::map<string,std::vector<int>>::iterator it = setAlleles.begin(); it != setAlleles.end(); ++it) {
         std::string species = it->first;
-        setRefCounts.at(species) = (int)std::count(it->second.begin(), it->second.end(), 0);
-        for (int i = 0; i < v.SNPaltAlleleIndices.size(); i++) {
-            int thisAAcount = (int)std::count(it->second.begin(), it->second.end(), v.SNPaltAlleleIndices[i]);
-            setAltAlleleCounts.at(species)[i] = thisAAcount;
-            double thisAAF = (double)thisAAcount/it->second.size();
-            setAAFs.at(species).push_back(thisAAF);
+        if(it->second.size() == 0) {        // Missing data for this set
+            setAAFs.at(species).push_back(-1);
+            setRefCounts.at(species) = 0;
+            setAltAlleleCounts.at(species).push_back(0);
+        } else {
+            setRefCounts.at(species) = (int)std::count(it->second.begin(), it->second.end(), 0);
+            for (int i = 1; i < v.SNPAlleleIndices.size(); i++) {
+                int thisAAcount = (int)std::count(it->second.begin(), it->second.end(), v.SNPAlleleIndices[i]);
+                setAltAlleleCounts.at(species).push_back(thisAAcount);
+                double thisAAF = (double)thisAAcount/it->second.size();
+                setAAFs.at(species).push_back(thisAAF);
+           //     std::cerr << "v.SNPaltAlleleIndices[i]" << v.SNPAlleleIndices[i] << std::endl;
+           //     std::cerr << "thisAAcount" << thisAAcount << std::endl;
+           //     std::cerr << "it->second.size()" << it->second.size() << std::endl;
+            }
         }
     }
 }

@@ -111,7 +111,7 @@ int fstMain(int argc, char** argv) {
             totalVariantNumber++;
             if (totalVariantNumber % reportProgressEvery == 0) reportProgessVCF(totalVariantNumber, startTime);
             
-            //std::cerr << "Variant N:" << totalVariantNumber << std::endl;
+         //   std::cerr << "Variant N:" << totalVariantNumber << std::endl;
             
             fields = split(line, '\t');
             
@@ -119,39 +119,48 @@ int fstMain(int argc, char** argv) {
             
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             
-            /*if (coordDouble >= 3447835) {
-                std::cerr << "coordDouble: " << coordDouble << std::endl;
-                std::cerr << "coordInt: " << coordInt << std::endl;
-            }*/
+         //  if (totalVariantNumber == 6015) std::cerr <<  line << std::endl;
             
             GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
-            // if (coordInt >= 3447835) std::cerr << "Counts created: " << std::endl;
+            //std::cerr << "Counts created: " << std::endl;
             c->getSetVariantCounts(genotypes, setInfo.posToPopMap, v);
-            // if (coordInt >= 3447835) std::cerr << "Summarised all counts: " << std::endl;
+            //std::cerr << "Summarised all counts: " << std::endl;
             c->calculatePiPerVariantPerSet();
-            // if (coordInt >= 3447835) std::cerr << "Got pi for all populations: " << std::endl;
+            //if (totalVariantNumber >= 43) std::cerr << "Got pi for all populations: " << std::endl;
             genotypes.clear(); genotypes.shrink_to_fit();
             
             for (int i = 0; i != p.pairs.size(); i++) {
                 string set1 = p.pairs[i][0]; string set2 = p.pairs[i][1];
                 
-                
                 double p1 = c->setAAFs.at(set1)[0]; double p2 = c->setAAFs.at(set2)[0];
-                if (bPairInformativeThisSNP(p1,p2)) p.usedVars[i]++;
-                else continue;
                 int n1 = c->setRefCounts.at(set1) + c->setAltAlleleCounts.at(set1)[0];
                 int n2 = c->setRefCounts.at(set2) + c->setAltAlleleCounts.at(set2)[0];
+                int set1FullSize = (int)2*setInfo.popToPosMap.at(set1).size();
+                int set2FullSize = (int)2*setInfo.popToPosMap.at(set2).size();
                 
-            /*    if (coordInt >= 3447835) {
+                if (bPairInformativeThisSNP(p1,p2,n1,n2,set1FullSize,set2FullSize)) p.usedVars[i]++;
+                else continue;
+                
+           /*     if (totalVariantNumber == 6015) {
                     std::cerr << "p1: " << p1 << std::endl;
                     std::cerr << "p2: " << p2 << std::endl;
-                }*/
+                    std::cerr << "n1: " << n1 << std::endl;
+                    std::cerr << "n2: " << n2 << std::endl;
+                    std::cerr << "totalVariantNumber: " << totalVariantNumber << std::endl;
+                } */
                 
                 double thisSNPFstNumerator = calculateFstNumerator(p1, p2, n1, n2);
                 double thisSNPFstDenominator = calculateFstDenominator(p1, p2);
                 double thisSNPDxy = DxyPerSNPfromSetAlleles(c, set1, set2);
                 double thisSNPpi1 = c->piPerVariantPerSet.at(set1);
                 double thisSNPpi2 = c->piPerVariantPerSet.at(set2);
+                
+                
+                /*  if (isnan(thisSNPFstNumerator) || isnan(thisSNPFstDenominator)) {
+                     std::cerr << "thisSNPFstNumerator: " << thisSNPFstNumerator << std::endl;
+                     std::cerr << "thisSNPFstDenominator: " << thisSNPFstDenominator << std::endl;
+                     std::cerr << "totalVariantNumber: " << totalVariantNumber << std::endl;
+                 } */
                 
                 p.addSNPresultsToWindows(i,thisSNPFstNumerator,thisSNPFstDenominator, thisSNPDxy, thisSNPpi1,thisSNPpi2,v.posInt);
                 
@@ -218,6 +227,12 @@ void parseFstOptions(int argc, char** argv) {
         die = true;
     }
     
+    if (windowSizeStep.size() != 2) {
+        std::cerr << "Error in the -w option: It needs two numbers separated by a comma; e.g. '-w 20,10'\n";
+        die = true;
+    }
+    
+    
     if (opt::windowStep > opt::windowSize) {
         std::cerr << "Error in the -w option: The window step cannot be higher than window size (you can set -w 1,1 for per variant Fst)\n";
         die = true;
@@ -241,11 +256,14 @@ void parseFstOptions(int argc, char** argv) {
     opt::FstPairsFile = argv[optind++];
 }
 
-bool bPairInformativeThisSNP(const double p1, const double p2) {
+bool bPairInformativeThisSNP(const double p1, const double p2, const int n1, const int n2,
+                             const int set1FullSize, const int set2FullSize) {
     bool bDataInformative = true;
     if (p1 == -1) bDataInformative = false;  // If any member of the pair has entirely missing data, just move on to the next pair
     if (p2 == -1) bDataInformative = false;
     if (p1 == 0 && p2 == 0) bDataInformative = false;
     if (p1 == 1 && p2 == 1) bDataInformative = false;
+    if (n1 <= 1 || n2 <= 1) bDataInformative = false;
+    if ((double)n1/set1FullSize <= 0.8 || (double)n2/set2FullSize <= 0.8) bDataInformative = false;
     return bDataInformative;
 }

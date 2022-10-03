@@ -17,15 +17,16 @@ public:
         refAllele = VCFfields[3]; altAlleles = split(VCFfields[4], ',');
         
         if (refAllele.length() > 1) onlyIndel = true;
+        else SNPAlleleIndices.push_back(0);
         
         std::vector<std::string>::iterator it = std::find(altAlleles.begin(), altAlleles.end(), "*");
         if (it != altAlleles.end()) starPos = (int) std::distance(altAlleles.begin(), it);
         else starPos = -1; // There is no star among the alternative alleles
         
         for (int i = 0; i < altAlleles.size(); i++) {
-            if (altAlleles[i].length() == 1 && i != starPos) SNPaltAlleleIndices.push_back(i);
+            if (altAlleles[i].length() == 1 && i != starPos) SNPAlleleIndices.push_back(i+1);
         }
-        if (SNPaltAlleleIndices.size() == 0) onlyIndel = true;
+        if (SNPAlleleIndices.size() == 0) onlyIndel = true;
         
     }
     
@@ -33,7 +34,7 @@ public:
     int posInt;
     string refAllele;
     std::vector<string> altAlleles;
-    std::vector<int> SNPaltAlleleIndices;
+    std::vector<int> SNPAlleleIndices;
     
     bool onlyIndel = false;
     

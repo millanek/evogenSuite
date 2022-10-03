@@ -17,7 +17,8 @@
 
 void parseFstOptions(int argc, char** argv);
 int fstMain(int argc, char** argv);
-bool bPairInformativeThisSNP(const double p1, const double p2);
+bool bPairInformativeThisSNP(const double p1, const double p2, const int n1, const int n2,
+                             const int set1FullSize, const int set2FullSize);
 
 
 inline double calculateFstNumerator(const double p1, const double p2, const int n1, const int n2) {
