@@ -92,16 +92,8 @@ int DistOutMain(int argc, char** argv) {
     }
     
     
-    // 2) Loading the accessible genome bad file:
-    AccessibleGenome* ag;
-    if (!opt::accesibleGenBedFile.empty()) {
-       std::ifstream* accessibleGenomeBed = new std::ifstream(opt::accesibleGenBedFile);
-       std::cerr << "Loading the accessible genome annotation" << std::endl;
-       ag = new AccessibleGenome(accessibleGenomeBed);
-       std::cerr << "Done" << std::endl;
-   }
-     // int numAccessibleBP = ag->getAccessibleBPinRegion(sc, i, i+opt::accessibleGenBedWindow);
-    
+    // 2) Loading the accessible genome bed file:
+    AccessibleGenome* ag = new AccessibleGenome(opt::accesibleGenBedFile);    
     
     // 3) Praparing the containers to hold the results
     // 3a) for per-SNP results
@@ -125,7 +117,6 @@ int DistOutMain(int argc, char** argv) {
     
     std::vector<std::string> fields;
     int reportProgressEvery = 1000; std::clock_t startTime = std::clock();
-    string chr; string coord; double coordDouble;
     // 4b) Looping through the file
     while (getline(*vcfFile, line)) {
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end()); // Deal with any left over \r from files prepared on Windows
@@ -139,33 +130,26 @@ int DistOutMain(int argc, char** argv) {
             totalVariantNumber++;
             if (totalVariantNumber % reportProgressEvery == 0) reportProgessVCF(totalVariantNumber, startTime);
 
-            fields = split(line, '\t'); chr = fields[0]; coord = fields[1]; coordDouble = stringToDouble(coord);
+            fields = split(line, '\t');
+            
+            VariantInfo v(fields); if (v.onlyIndel) continue; // Only consider SNPs
+            
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             
-            // Only consider biallelic SNPs
-            string refAllele = fields[3]; string altAllele = fields[4]; bool ignoreSite = false;
-            if (altAllele == "*") ignoreSite = true;
-            if (!opt::allowIndels) {
-                if (refAllele.length() > 1 || altAllele.length() > 1) ignoreSite = true;
-            }
-            if (ignoreSite) {
-                refAllele.clear(); refAllele.shrink_to_fit(); altAllele.clear(); altAllele.shrink_to_fit();
-                genotypes.clear(); genotypes.shrink_to_fit(); continue;
-            }
             
             GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
             c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
             genotypes.clear(); genotypes.shrink_to_fit();
             
             // Check if we are still in the same physical window...
-            if (coordDouble > currentWindowEnd || coordDouble < currentWindowStart) {
+            if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
                 // Find the number of accessible BPs in this window:
                 int accessibleInThisWindow = opt::fixedWindowSize;
-                if (!opt::accesibleGenBedFile.empty()) {
-                    if (coordDouble > currentWindowEnd) {
-                        accessibleInThisWindow = ag->getAccessibleBPinRegion(chr, currentWindowStart, currentWindowStart + opt::fixedWindowSize);
-                    } else if (coordDouble < currentWindowStart) {
-                        accessibleInThisWindow = ag->getAccessibleBPinRegion(chr, 0, opt::fixedWindowSize);
+                if (ag->initialised) {
+                    if (v.posInt > currentWindowEnd) {
+                        accessibleInThisWindow = ag->getAccessibleBPinRegion(v.chr, currentWindowStart, currentWindowStart + opt::fixedWindowSize);
+                    } else if (v.posInt < currentWindowStart) {
+                        accessibleInThisWindow = ag->getAccessibleBPinRegion(v.chr, 0, opt::fixedWindowSize);
                     }
                 }
                 
@@ -189,7 +173,7 @@ int DistOutMain(int argc, char** argv) {
                         DxyFixedWindowPerSNP[i][j].clear();
                     }
                     
-                    *outFilesFixedWindow[i] << chr << "\t" << currentWindowStart << "\t" << currentWindowEnd << "\t" << usedVars[i] << "\t" << missingVars[i] << "\t" << accessibleInThisWindow << "\t";
+                    *outFilesFixedWindow[i] << v.chr << "\t" << currentWindowStart << "\t" << currentWindowEnd << "\t" << usedVars[i] << "\t" << missingVars[i] << "\t" << accessibleInThisWindow << "\t";
                     print_vector(DxyFixedWindowAveraged[i], *outFilesFixedWindow[i]);
                 }
                 
@@ -201,9 +185,9 @@ int DistOutMain(int argc, char** argv) {
                     }
                 }
                 
-                if (coordDouble > currentWindowEnd) {
+                if (v.posInt > currentWindowEnd) {
                     currentWindowStart = currentWindowStart + opt::fixedWindowSize; currentWindowEnd = currentWindowEnd + opt::fixedWindowSize;
-                } else if (coordDouble < currentWindowStart) {
+                } else if (v.posInt < currentWindowStart) {
                     currentWindowStart = 0; currentWindowEnd = 0 + opt::fixedWindowSize;
                 }
             }
@@ -229,7 +213,7 @@ int DistOutMain(int argc, char** argv) {
                     } else {
                         missingDist[i][j]++;
                     }
-                    
+                     
                 }
             }
             delete c;

@@ -69,23 +69,22 @@ int AFmain(int argc, char** argv) {
             totalVariantNumber++;
             if (totalVariantNumber % reportProgressEvery == 0) reportProgessVCF(totalVariantNumber, startTime);
             
-            fields = split(line, '\t'); chr = fields[0]; coord = fields[1]; coordDouble = stringToDouble(coord);
+            fields = split(line, '\t');
+            
+            VariantInfo v(fields); if (v.onlyIndel) continue; // Only consider SNPs
+            
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             // Only consider biallelic SNPs
-            string refAllele = fields[3]; string altAllele = fields[4];
-            if (refAllele.length() > 1 || altAllele.length() > 1 || altAllele == "*") {
-                refAllele.clear(); refAllele.shrink_to_fit(); altAllele.clear(); altAllele.shrink_to_fit();
-                genotypes.clear(); genotypes.shrink_to_fit(); continue;
-            }
-            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size(), chr, coord);
-            c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
+            
+            GeneralSetCountsWithLikelihoods* c = new GeneralSetCountsWithLikelihoods(setInfo.popToPosMap, (int)genotypes.size()); 
+            c->getSetVariantCounts(genotypes, setInfo.posToPopMap, v);
             // std::cerr << "Here:" << totalVariantNumber << std::endl;
 
             
-            *outFileAF << chr << "\t" << coord << "\t" << refAllele << "\t" << altAllele;
+            *outFileAF << v.chr << "\t" << v.posInt << "\t" << v.refAllele << "\t" << v.altAlleles[0];
             if (opt::useGenotypeProbabilities) {
                 int likelihoodsOrProbabilitiesTagPosition = c->checkForGenotypeLikelihoodsOrProbabilities(fields);
-                if (likelihoodsOrProbabilitiesTagPosition == LikelihoodsProbabilitiesAbsent) {
+                if (likelihoodsOrProbabilitiesTagPosition == LikelihoodsProbabilitiesAbsent) { 
                     printMissingLikelihoodsWarning(fields[0], fields[1]);
                     opt::useGenotypeProbabilities = false;
                 } else c->getAFsFromGenotypeLikelihoodsOrProbabilities(genotypes,setInfo.posToPopMap,likelihoodsOrProbabilitiesTagPosition);
@@ -94,8 +93,8 @@ int AFmain(int argc, char** argv) {
                 }
             
             } else {
-                for(std::map<string,double>::iterator iter =  c->setAAFs.begin(); iter != c->setAAFs.end(); ++iter) {
-                    *outFileAF << "\t" << iter->second;
+                for(std::map<string,std::vector<double>>::iterator iter =  c->setAAFs.begin(); iter != c->setAAFs.end(); ++iter) {
+                    *outFileAF << "\t" << iter->second[0];
                 }
             }
             *outFileAF << "\n";

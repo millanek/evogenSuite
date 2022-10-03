@@ -9,14 +9,13 @@
 #define UtilsStats_hpp
 
 #include "UtilsGeneral.hpp"
+#include "UtilsSetCounts.hpp"
 
 std::vector<double> calculatePBSfromAFs(const double p1, const double p2, const double p3, const double p1AlleleCount, const double p2AlleleCount, const double p3AlleleCount);
-std::vector<double> calculatePBSnumerators(const GeneralSetCounts* c,const std::vector<string>& PBStrio);
-std::vector<double> calculatePBSdenominator(const GeneralSetCounts* c,const std::vector<string>& PBStrio);
 
 
 double DxyPerSNPfromAFs(double AF1, double AF2);
-double calculateDxy(const SetCounts& thisVarCounts, const int n1, const int n2);
+double DxyPerSNPfromSetAlleles(const GeneralSetCounts* c, const string& set1, const string& set2); 
 
 template <class T> double calculateFst(const T& fstNumerators, const T& fstDenominators) {
     double numeratorAverage = vector_average(fstNumerators);
@@ -26,5 +25,8 @@ template <class T> double calculateFst(const T& fstNumerators, const T& fstDenom
     return Fst;
 }
 
+
+double calculateInbreedingCoefficient(std::vector<int>& individualsWithVariant);
+//double calculateChiSqPvalForInbreeding(std::vector<int>& individualsWithVariant);
 
 #endif /* UtilsStats_hpp */

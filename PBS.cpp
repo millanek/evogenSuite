@@ -78,7 +78,7 @@ int PBSmain(int argc, char** argv) {
     
     std::vector<std::string> fields;
     std::clock_t startTime = std::clock();
-    int totalVariantNumber = 0; int reportProgressEvery = 1000; string chr; string coord; double coordDouble;
+    int totalVariantNumber = 0; int reportProgressEvery = 1000;
     
     string line; // for reading the input files
     std::istream* vcfFile = createReader(opt::vcfFile.c_str());
@@ -94,45 +94,37 @@ int PBSmain(int argc, char** argv) {
             totalVariantNumber++;
             if (totalVariantNumber % reportProgressEvery == 0) reportProgessVCF(totalVariantNumber, startTime);
             
-            fields = split(line, '\t'); chr = fields[0]; coord = fields[1]; coordDouble = stringToDouble(coord);
+            fields = split(line, '\t');
+            
+            VariantInfo v(fields); if (v.onlyIndel) continue; // Only consider SNPs
+            
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             
-            // Only consider biallelic SNPs
-            string refAllele = fields[3]; string altAllele = fields[4]; bool ignoreSite = false;
-            if (altAllele == "*") ignoreSite = true;
-            if (!opt::allowIndels) {
-                if (refAllele.length() > 1 || altAllele.length() > 1) ignoreSite = true;
-            }
-            if (ignoreSite) {
-                refAllele.clear(); refAllele.shrink_to_fit(); altAllele.clear(); altAllele.shrink_to_fit();
-                genotypes.clear(); genotypes.shrink_to_fit(); continue;
-            }
-            
-            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size(), chr, coord);
-            c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
+            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
+            c->getSetVariantCounts(genotypes, setInfo.posToPopMap,v);
             genotypes.clear(); genotypes.shrink_to_fit();
             // std::cerr << "Here:" << totalVariantNumber << std::endl;
             
             // find if we are in a gene:
-            std::vector<string> SNPgeneDetails = wgAnnotation.getSNPgeneDetails(chr, atoi(coord.c_str()));
+            std::vector<string> SNPgeneDetails = wgAnnotation.getSNPgeneDetails(v.chr, v.posInt);
             if (SNPgeneDetails[0] != "") {
                 currentGene = SNPgeneDetails[0];
                 if (previousGene == "") previousGene = currentGene;
             }
             
             // Check if we are still in the same physical window...
-            if (coordDouble > currentWindowEnd || coordDouble < currentWindowStart) {
+            if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
                 for (int i = 0; i != t.trios.size(); i++) {
                     int nFwSNPs1 = (int)t.resultsPhysicalWindows[i][0].size(); int nFwSNPs2 = (int)t.resultsPhysicalWindows[i][1].size(); int nFwSNPs3 = (int)t.resultsPhysicalWindows[i][2].size();
                     double PBSfw1 = 0; if (nFwSNPs1 > 0) { PBSfw1 = vector_average(t.resultsPhysicalWindows[i][0]); }
                     double PBSfw2 = 0; if (nFwSNPs2 > 0) { PBSfw2 = vector_average(t.resultsPhysicalWindows[i][1]); }
                     double PBSfw3 = 0; if (nFwSNPs3 > 0) { PBSfw3 = vector_average(t.resultsPhysicalWindows[i][2]); }
-                    *t.outFilesFixedWindow[i] << chr << "\t" << currentWindowStart << "\t" << currentWindowEnd << "\t" << PBSfw1 << "\t" << PBSfw2 << "\t" << PBSfw3 << "\t" << nFwSNPs1 << "\t" << nFwSNPs2 << "\t" << nFwSNPs3 << std::endl;
+                    *t.outFilesFixedWindow[i] << v.chr << "\t" << currentWindowStart << "\t" << currentWindowEnd << "\t" << PBSfw1 << "\t" << PBSfw2 << "\t" << PBSfw3 << "\t" << nFwSNPs1 << "\t" << nFwSNPs2 << "\t" << nFwSNPs3 << std::endl;
                     t.resultsPhysicalWindows[i][0].clear(); t.resultsPhysicalWindows[i][1].clear(); t.resultsPhysicalWindows[i][2].clear();
                 }
-                if (coordDouble > currentWindowEnd) {
+                if (v.posInt > currentWindowEnd) {
                     currentWindowStart = currentWindowStart + opt::fixedWindowSize; currentWindowEnd = currentWindowEnd + opt::fixedWindowSize;
-                } else if (coordDouble < currentWindowStart) {
+                } else if (v.posInt < currentWindowStart) {
                     currentWindowStart = 0; currentWindowEnd = 0 + opt::fixedWindowSize;
                 }
             }
@@ -140,26 +132,29 @@ int PBSmain(int argc, char** argv) {
             // std::cerr << coord << "\t";
             // print_vector_stream(SNPgeneDetails, std::cerr);
             // Now calculate the PBS stats:
-            double p1; double p2; double p3;
             for (int i = 0; i != t.trios.size(); i++) {
-                p1 = c->setAAFs.at(t.trios[i][0]); //assert(p_S1 == pS1test);
+                string set1 = t.trios[i][0]; string set2 = t.trios[i][1]; string set3 = t.trios[i][2];
+                
+                double p1 = c->setAAFs.at(set1)[0]; //assert(p_S1 == pS1test);
                 if (p1 == -1) continue;  // If any member of the trio has entirely missing data, just move on to the next trio
-                p2 = c->setAAFs.at(t.trios[i][1]); //assert(p_S2 == pS2test);
+                double p2 = c->setAAFs.at(set2)[0]; //assert(p_S2 == pS2test);
                 if (p2 == -1) continue;
-                p3 = c->setAAFs.at(t.trios[i][2]); // assert(p_S3 == pS3test);
+                double p3 = c->setAAFs.at(set3)[0]; // assert(p_S3 == pS3test);
                 if (p3 == -1) continue;
                 
                 if (p1 == 0 && p2 == 0 && p3 == 0) { continue; }
                 if (p1 == 1 && p2 == 1 && p3 == 1) { continue; }
                 t.usedVars[i]++;
                 
-                std::vector<double> thisSNP_PBS = calculatePBSfromAFs(p1,p2,p3,
-                                                                      c->setAlleleCounts.at(t.trios[i][0]),
-                                                                      c->setAlleleCounts.at(t.trios[i][1]),
-                                                                      c->setAlleleCounts.at(t.trios[i][2]));
+                int n1 = c->setRefCounts.at(set1) + c->setAltAlleleCounts.at(set1)[0];
+                int n2 = c->setRefCounts.at(set2) + c->setAltAlleleCounts.at(set2)[0];
+                int n3 = c->setRefCounts.at(set3) + c->setAltAlleleCounts.at(set3)[0];
+                
+                
+                std::vector<double> thisSNP_PBS = calculatePBSfromAFs(p1,p2,p3,n1,n2,n3);
                 
                 t.resultsSNPwindows[i][0].push_back(thisSNP_PBS[0]); t.resultsSNPwindows[i][1].push_back(thisSNP_PBS[1]); t.resultsSNPwindows[i][2].push_back(thisSNP_PBS[2]);
-                t.resultsSNPwindows[i][3].push_back(coordDouble);
+                t.resultsSNPwindows[i][3].push_back((double)v.posInt);
                 t.resultsSNPwindows[i][0].pop_front(); t.resultsSNPwindows[i][1].pop_front(); t.resultsSNPwindows[i][2].pop_front(); t.resultsSNPwindows[i][3].pop_front();
                 
                 t.resultsPhysicalWindows[i][0].push_back(thisSNP_PBS[0]); t.resultsPhysicalWindows[i][1].push_back(thisSNP_PBS[1]); t.resultsPhysicalWindows[i][2].push_back(thisSNP_PBS[2]);
@@ -176,7 +171,7 @@ int PBSmain(int argc, char** argv) {
                 
                 if (t.usedVars[i] > opt::windowSize && (t.usedVars[i] % opt::windowStep == 0)) {
                     // std::cerr << PBSresults[i][0][0] << std::endl;
-                    *t.outFiles[i] << chr << "\t" << (int)t.resultsSNPwindows[i][3][0] << "\t" << coord << "\t" << vector_average(t.resultsSNPwindows[i][0]) << "\t" << vector_average(t.resultsSNPwindows[i][1]) << "\t" << vector_average(t.resultsSNPwindows[i][2]) << std::endl;
+                    *t.outFiles[i] << v.chr << "\t" << (int)t.resultsSNPwindows[i][3][0] << "\t" << v.posInt << "\t" << vector_average(t.resultsSNPwindows[i][0]) << "\t" << vector_average(t.resultsSNPwindows[i][1]) << "\t" << vector_average(t.resultsSNPwindows[i][2]) << std::endl;
                 }
                 // }
             }

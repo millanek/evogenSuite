@@ -113,28 +113,20 @@ int fstMain(int argc, char** argv) {
             
             //std::cerr << "Variant N:" << totalVariantNumber << std::endl;
             
-            fields = split(line, '\t'); chr = fields[0]; coord = fields[1];
-            std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
+            fields = split(line, '\t');
             
-            // Only consider biallelic SNPs
-            string refAllele = fields[3]; string altAllele = fields[4]; bool ignoreSite = false;
-            if (altAllele == "*") ignoreSite = true;
-            if (!opt::allowIndels) {
-                if (refAllele.length() > 1 || altAllele.length() > 1) ignoreSite = true;
-            }
-            if (ignoreSite) {
-                refAllele.clear(); refAllele.shrink_to_fit(); altAllele.clear(); altAllele.shrink_to_fit();
-                genotypes.clear(); genotypes.shrink_to_fit(); continue;
-            }
+            VariantInfo v(fields); if (v.onlyIndel) continue; // Only consider SNPs
+            
+            std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             
             /*if (coordDouble >= 3447835) {
                 std::cerr << "coordDouble: " << coordDouble << std::endl;
                 std::cerr << "coordInt: " << coordInt << std::endl;
             }*/
             
-            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size(), chr, coord);
+            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
             // if (coordInt >= 3447835) std::cerr << "Counts created: " << std::endl;
-            c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
+            c->getSetVariantCounts(genotypes, setInfo.posToPopMap, v);
             // if (coordInt >= 3447835) std::cerr << "Summarised all counts: " << std::endl;
             c->calculatePiPerVariantPerSet();
             // if (coordInt >= 3447835) std::cerr << "Got pi for all populations: " << std::endl;
@@ -144,10 +136,11 @@ int fstMain(int argc, char** argv) {
                 string set1 = p.pairs[i][0]; string set2 = p.pairs[i][1];
                 
                 
-                double p1 = c->setAAFs.at(set1); double p2 = c->setAAFs.at(set2);
+                double p1 = c->setAAFs.at(set1)[0]; double p2 = c->setAAFs.at(set2)[0];
                 if (bPairInformativeThisSNP(p1,p2)) p.usedVars[i]++;
                 else continue;
-                int n1 = c->setAlleleCounts.at(set1); int n2 = c->setAlleleCounts.at(set2);
+                int n1 = c->setRefCounts.at(set1) + c->setAltAlleleCounts.at(set1)[0];
+                int n2 = c->setRefCounts.at(set2) + c->setAltAlleleCounts.at(set2)[0];
                 
             /*    if (coordInt >= 3447835) {
                     std::cerr << "p1: " << p1 << std::endl;
@@ -156,20 +149,20 @@ int fstMain(int argc, char** argv) {
                 
                 double thisSNPFstNumerator = calculateFstNumerator(p1, p2, n1, n2);
                 double thisSNPFstDenominator = calculateFstDenominator(p1, p2);
-                double thisSNPDxy = DxyPerSNPfromAFs(p1, p2);
+                double thisSNPDxy = DxyPerSNPfromSetAlleles(c, set1, set2);
                 double thisSNPpi1 = c->piPerVariantPerSet.at(set1);
                 double thisSNPpi2 = c->piPerVariantPerSet.at(set2);
                 
-                p.addSNPresultsToWindows(i,thisSNPFstNumerator,thisSNPFstDenominator, thisSNPDxy, thisSNPpi1,thisSNPpi2,c->posInt);
+                p.addSNPresultsToWindows(i,thisSNPFstNumerator,thisSNPFstDenominator, thisSNPDxy, thisSNPpi1,thisSNPpi2,v.posInt);
                 
                 
                 if (p.usedVars[i] > opt::windowSize && (p.usedVars[i] % opt::windowStep == 0)) {
-                    p.finalizeAndOutputSNPwindow(i, chr, c->posInt, ag);
+                    p.finalizeAndOutputSNPwindow(i, v.chr, v.posInt, ag);
                 }
                 
                 // Check if we are still in the same physical window...
-                if (c->posInt > currentWindowEnd || c->posInt < currentWindowStart) {
-                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, chr, c->posInt, ag, currentWindowStart, currentWindowEnd);
+                if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
+                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd);
                 }
                 
             }

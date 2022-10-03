@@ -42,33 +42,9 @@ std::vector<double> calculatePBSfromAFs(const double p1, const double p2, const 
 }
 
 
-std::vector<double> calculatePBSnumerators(const GeneralSetCounts* c, const std::vector<string>& PBStrio) {
-    double power12 = pow((c->setAAFs.at(PBStrio[0])-c->setAAFs.at(PBStrio[1])), 2);
-    double power13 = pow((c->setAAFs.at(PBStrio[0])-c->setAAFs.at(PBStrio[2])), 2);
-    double power23 = pow((c->setAAFs.at(PBStrio[1])-c->setAAFs.at(PBStrio[2])), 2);
-    double fraction1 = (c->setAAFs.at(PBStrio[0])*(1-c->setAAFs.at(PBStrio[0])))/(c->setAlleleCounts.at(PBStrio[0])-1);
-    double fraction2 = (c->setAAFs.at(PBStrio[1])*(1-c->setAAFs.at(PBStrio[1])))/(c->setAlleleCounts.at(PBStrio[1])-1);
-    double fraction3 = (c->setAAFs.at(PBStrio[2])*(1-c->setAAFs.at(PBStrio[2])))/(c->setAlleleCounts.at(PBStrio[2])-1);
-    double numerator12 = power12 - fraction1 - fraction2;
-    double numerator13 = power13 - fraction1 - fraction3;
-    double numerator23 = power23 - fraction2 - fraction3;
-    std::vector<double> PBSnumerators; PBSnumerators.push_back(numerator12);
-    PBSnumerators.push_back(numerator13); PBSnumerators.push_back(numerator23);
-    return PBSnumerators;
-}
-
-std::vector<double> calculatePBSdenominator(const GeneralSetCounts* c, const std::vector<string>& PBStrio) {
-    double denominator12 = (c->setAAFs.at(PBStrio[0])*(1-c->setAAFs.at(PBStrio[1])))+(c->setAAFs.at(PBStrio[1])*(1-c->setAAFs.at(PBStrio[0])));
-    double denominator13 = (c->setAAFs.at(PBStrio[0])*(1-c->setAAFs.at(PBStrio[2])))+(c->setAAFs.at(PBStrio[2])*(1-c->setAAFs.at(PBStrio[0])));
-    double denominator23 = (c->setAAFs.at(PBStrio[1])*(1-c->setAAFs.at(PBStrio[2])))+(c->setAAFs.at(PBStrio[2])*(1-c->setAAFs.at(PBStrio[1])));
-    std::vector<double> PBSdenominators; PBSdenominators.push_back(denominator12);
-    PBSdenominators.push_back(denominator13); PBSdenominators.push_back(denominator23);
-    return PBSdenominators;
-}
-
 
 // -------------------------------------------------------------------------
-// 2. Functions to calculate XXX:
+// 2. Functions to calculate Dxy:
 
 double DxyPerSNPfromAFs(double AF1, double AF2) {
     double dxy = AF1*(1-AF2) + AF2*(1-AF1);
@@ -76,30 +52,77 @@ double DxyPerSNPfromAFs(double AF1, double AF2) {
 }
 
 
-double calculateDxy(const SetCounts& thisVarCounts, const int n1, const int n2) {
-    double Dxy;
+double DxyPerSNPfromSetAlleles(const GeneralSetCounts* c, const string& set1, const string& set2) {
+    double Dxy = 0;
+    const std::vector<int> allelesSet1 = c->setAlleles.at(set1);
+    const std::vector<int> allelesSet2 = c->setAlleles.at(set2);
+    const int n1 = (int)allelesSet1.size(); const int n2 = (int)allelesSet1.size();
+    
     int sumKij = 0;
-    for (std::vector<std::string>::size_type i = 0; i != n1/2; i++) {
-        for (std::vector<std::string>::size_type j = 0; j != n2/2; j++) {
-            if (thisVarCounts.set1individualsWithVariant[i] == 0 && thisVarCounts.set2individualsWithVariant[j] == 0) {
-            } else if (thisVarCounts.set1individualsWithVariant[i] == 1 && thisVarCounts.set2individualsWithVariant[j] == 0) {
-                sumKij = sumKij + 2;
-            } else if (thisVarCounts.set1individualsWithVariant[i] == 0 && thisVarCounts.set2individualsWithVariant[j] == 1) {
-                sumKij = sumKij + 2;
-            } else if (thisVarCounts.set1individualsWithVariant[i] == 1 && thisVarCounts.set2individualsWithVariant[j] == 1) {
-                sumKij = sumKij + 2;
-            } else if (thisVarCounts.set1individualsWithVariant[i] == 2 && thisVarCounts.set2individualsWithVariant[j] == 1) {
-                sumKij = sumKij + 2;
-            } else if (thisVarCounts.set1individualsWithVariant[i] == 1 && thisVarCounts.set2individualsWithVariant[j] == 2) {
-                sumKij = sumKij + 2;
-            } else if (thisVarCounts.set1individualsWithVariant[i] == 2 && thisVarCounts.set2individualsWithVariant[j] == 2) {
-            } else if (thisVarCounts.set1individualsWithVariant[i] == 2 && thisVarCounts.set2individualsWithVariant[j] == 0) {
-                sumKij = sumKij + 4;
-            } else if (thisVarCounts.set1individualsWithVariant[i] == 0 && thisVarCounts.set2individualsWithVariant[j] == 2) {
-                sumKij = sumKij + 4;
-            }
+    for (std::vector<std::string>::size_type i = 0; i != n1; i++) {
+        for (std::vector<std::string>::size_type j = 0; j != n2; j++) {
+            if (allelesSet1[i] != allelesSet2[j]) sumKij = sumKij + 1;
         }
+        Dxy = (double)sumKij/(n1*n2);
     }
-    Dxy = (double)sumKij/(n1*n2);
     return Dxy;
 }
+
+
+// -------------------------------------------------------------------------
+// 3. Functions to calculate Inbreeding coefficient (per SNP):
+
+double calculateInbreedingCoefficient(std::vector<int>& individualsWithVariant) {
+    int naa = 0; int nAa = 0; int nAA = 0;
+    for (std::vector<int>::size_type i = 0; i != individualsWithVariant.size(); i++) {
+        if (individualsWithVariant[i] == 0) naa++;
+        if (individualsWithVariant[i] == 1) nAa++;
+        if (individualsWithVariant[i] == 2) nAA++;
+    }
+    
+    // Get the proportions of alt-hom and hets
+    double pAA = (double)nAA / individualsWithVariant.size();
+    double pAa = (double)nAa / individualsWithVariant.size();
+    
+    // Allele frequencies
+    double p = pAA + (0.5 * pAa);
+    double q = 1 - p;
+    
+    // Get the Hardy-Weinberg prediction for expected number of heterozygotes:
+    double HWAa = 2*p*q;
+
+    
+    // Get the inbreeding coefficient
+    double F = (HWAa - pAa) / HWAa;
+    return F;
+}
+
+/*double calculateChiSqPvalForInbreeding(std::vector<int>& individualsWithVariant) {
+    // Get the observed numbers of genotypes
+    int naa = 0; int nAa = 0; int nAA = 0;
+    for (std::vector<int>::size_type i = 0; i != individualsWithVariant.size(); i++) {
+        if (individualsWithVariant[i] == 0) naa++;
+        if (individualsWithVariant[i] == 1) nAa++;
+        if (individualsWithVariant[i] == 2) nAA++;
+    }
+    
+    // Get the observed proportions of alt-hom and hets
+    double pAA = (double)nAA / individualsWithVariant.size();
+    double pAa = (double)nAa / individualsWithVariant.size();
+    // Allele frequencies
+    double p = pAA + (0.5 * pAa);
+    double q = 1 - p;
+    // Get the Hardy-Weinberg prediction for expected proportion of heterozygotes:
+    double HWAa = 2*p*q;
+    
+    // Get the expected numbers of genotypes:
+    double expAA = pow(p, 2) * individualsWithVariant.size();
+    double expAa = HWAa * individualsWithVariant.size();
+    double expaa = pow(q, 2) * individualsWithVariant.size();
+    
+    // Perform the chi-Sqared test
+    std::vector<double> observed{static_cast<double>(nAA),static_cast<double>(nAa),static_cast<double>(naa)};
+    std::vector<double> expected{expAA,expAa,expaa};
+    double pVal = pearson_chi_sq_goodness_of_fit(observed, expected, 1);
+    return pVal;
+} */

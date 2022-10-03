@@ -9,7 +9,9 @@
 #define AlleleFreq_hpp
 
 #include <stdio.h>
-#include "UtilsGeneral.hpp" 
+#include "UtilsGeneral.hpp"
+#include "UtilsSetCounts.hpp"
+#include "UtilsSetInfo.hpp"
 
 void parseAFoptions(int argc, char** argv);
 int AFmain(int argc, char** argv);

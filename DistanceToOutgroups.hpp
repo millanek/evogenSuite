@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include "UtilsGeneral.hpp"
 #include "UtilsAnnotation.hpp"
+#include "UtilsSetCounts.hpp"
+#include "UtilsSetInfo.hpp"
+#include "UtilsStats.hpp" 
 
 
 void parseDistOutOptions(int argc, char** argv);

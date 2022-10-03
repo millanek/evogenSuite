@@ -11,6 +11,8 @@
 #include "UtilsGeneral.hpp"
 #include "UtilsAnnotation.hpp"
 #include "UtilsStats.hpp"
+#include "UtilsSetCounts.hpp"
+#include "UtilsSetInfo.hpp"
 #include <math.h>
 
 void parseFstOptions(int argc, char** argv);

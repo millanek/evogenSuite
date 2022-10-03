@@ -10,6 +10,8 @@
 
 #include "UtilsGeneral.hpp"
 #include "UtilsStats.hpp"
+#include "UtilsSetCounts.hpp"
+#include "UtilsSetInfo.hpp"
 
 void parsePBSoptions(int argc, char** argv);
 int PBSmain(int argc, char** argv);
