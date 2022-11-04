@@ -10,6 +10,7 @@
 #include <deque>
 
 #define SUBPROGRAM "alleleFreq"
+#define MIN_SETS 1
 
 #define DEBUG 1
 
@@ -17,8 +18,7 @@ static const char *AF_USAGE_MESSAGE =
 "Usage: " PROGRAM_BIN " " SUBPROGRAM " [OPTIONS] INPUT_FILE.vcf POPULATIONS.txt\n"
 "Calculate the Allele Frequencies per population/species from a VCF \n"
 "\n"
-"       -h, --help                              display this help and exit\n"
-"       -n, --run-name                          run-name will be included in the output file name\n"
+HelpOption RunNameOption
 "       -g, --use-genotype-probabilities        (optional) use genotype probabilities (GP tag) if present\n"
 "                                               if GP not present calculate genotype probabilities from likelihoods (GL or PL tags) using a Hardy-Weinberg prior\n"
 "\n"
@@ -46,11 +46,11 @@ namespace opt
 int AFmain(int argc, char** argv) {
     parseAFoptions(argc, argv);
     
-    SetInformation setInfo(opt::setsFile);
+    SetInformation setInfo(opt::setsFile,MIN_SETS);
     
     int totalVariantNumber = 0;
     std::vector<std::string> fields;
-    int reportProgressEvery = 10000; string chr; string coord; double coordDouble;
+    int reportProgressEvery = 10000; string chr; string coord; 
     std::clock_t startTime = std::clock();
     std::ostream* outFileAF = createWriter(stripExtension(opt::setsFile) + "_" + opt::runName + "_AF" + ".txt");
     

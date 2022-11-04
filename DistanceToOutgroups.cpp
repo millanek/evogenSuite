@@ -8,6 +8,7 @@
 #include "DistanceToOutgroups.hpp" 
 
 #define SUBPROGRAM "DistOutgroups"
+#define MIN_SETS 2
 
 #define DEBUG 1
 
@@ -61,12 +62,11 @@ namespace opt
 int DistOutMain(int argc, char** argv) {
     parseDistOutOptions(argc, argv);
     
-    SetInformation setInfo(opt::setsFile);
+    SetInformation setInfo(opt::setsFile, MIN_SETS);
     
     string line; // for reading the input files
     
     // 1) Dividing up and assigning the populations
-    std::vector<string> populations; // Will hold the names of all populations
     std::vector<string> outgroups; // Will hold the names of the outgroup populations
     std::vector<string> ingroups; // Will hold the names of the ingroup populations
     
@@ -129,16 +129,12 @@ int DistOutMain(int argc, char** argv) {
         } else {
             totalVariantNumber++;
             if (totalVariantNumber % reportProgressEvery == 0) reportProgessVCF(totalVariantNumber, startTime);
-
+    
             fields = split(line, '\t');
-            
             VariantInfo v(fields); if (v.onlyIndel) continue; // Only consider SNPs
-            
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
-            
-            
             GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
-            c->getSetVariantCountsSimple(genotypes, setInfo.posToPopMap);
+            c->getSetVariantCounts(genotypes, setInfo.posToPopMap, v);
             genotypes.clear(); genotypes.shrink_to_fit();
             
             // Check if we are still in the same physical window...
@@ -221,10 +217,6 @@ int DistOutMain(int argc, char** argv) {
     }
     
     return 0;
-    
-    
-    
-    
     
 }
 

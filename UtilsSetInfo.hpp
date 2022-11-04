@@ -21,12 +21,11 @@ size_t locateOneSample(std::vector<std::string>& sample_names, const std::string
 class SetInformation {
 public:
     
-    SetInformation(string setsFileName) {
+    SetInformation(const string& setsFileName, const int minPopulations) {
+        
         std::ifstream* setsFile = new std::ifstream(setsFileName.c_str());
-        if (setsFile->fail()) {
-            std::cerr << "ERROR: The file " << setsFileName << " could not be opened\n";
-            exit(1);
-        }
+        assertFileOpen(*setsFile, setsFileName);
+        
         string line;
         while (getline(*setsFile, line)) {
             // std::cerr << line << std::endl;
@@ -40,6 +39,8 @@ public:
             populations.push_back(it->first);
             // std::cerr << it->first << std::endl;
         } std::cerr << "There are " << populations.size() << " sets (populations/species) " << std::endl;
+        
+        if (populations.size() < minPopulations) notEnoughPopulationsError(minPopulations);
     };
     
     

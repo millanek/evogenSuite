@@ -87,6 +87,22 @@ public:
     void calculatePiPerVariantPerSet();
     void calculateHeterozygosityPerVariantPerSet();
     
+    int getOverallCountOfFirstAltAllele() const {
+        int overallCount = 0;
+        for (std::map<string,std::vector<int>>::const_iterator it = setAltAlleleCounts.begin(); it != setAltAlleleCounts.end(); it++) {
+            overallCount += it->second[0];
+        }
+        return overallCount;
+    }
+    
+    int getOverallCountOfRefAllele() const {
+        int overallCount = 0;
+        for (std::map<string,int>::const_iterator it = setRefCounts.begin(); it != setRefCounts.end(); it++) {
+            overallCount += it->second;
+        }
+        return overallCount;
+    }
+    
 private:
     // These are needed to calculate the heterozygosity values
     std::map<string,int> setHetCounts;

@@ -6,9 +6,9 @@
 //
 
 #include "PBS.hpp"
-#include "UtilsAnnotation.hpp"
 
 #define SUBPROGRAM "PBS"
+#define MIN_SETS 3
 
 #define DEBUG 1
 
@@ -21,20 +21,15 @@ static const char *PBS_USAGE_MESSAGE =
 "POP1   POP2    POP3\n"
 "There can be multiple lines and then the program generates multiple ouput files, named like POP1_POP2_POP3_PBS_SIZE_STEP.txt\n"
 "\n"
-"       -h, --help                              display this help and exit\n"
+HelpOption RunNameOption MaxMissOption
 "       -f, --fixedW sizeKb                     fixed window size (default: 10kb)\n"
 "       -w SIZE,STEP --window=SIZE,STEP         the parameters of the sliding window: contains SIZE SNPs and move by STEP (default: 20,10)\n"
 "       --annot=ANNOTATION.gffExtract           (optional) gene annotation in the same format as for the 'getCodingSeq' subprogram\n"
 "                                               outputs PBS per gene (only exons, with introns, and with 3kb upstream)\n"
-"       -i, --allow-indels-and-multiallelics    (optional) also calculate the PBS score for indels, and multiallelics\n"
-"                                               for multiallelics, the first alternate allele is considered\n"
-"                                               sites where the ALT allele is simply '*' are ignored\n"
-"       -r , --region=start,length              (optional) only process a subset of the VCF file\n"
-"       -n, --run-name                          run-name will be included in the output file name\n"
 "\n"
 "\nReport bugs to " PACKAGE_BUGREPORT "\n\n";
 
-static const char* shortopts = "hw:n:f:i";
+static const char* shortopts = "hw:n:f:m:";
 
 enum { OPT_ANNOT  };
 
@@ -44,7 +39,7 @@ static const struct option longopts[] = {
     { "annot",   required_argument, NULL, OPT_ANNOT },
     { "help",   no_argument, NULL, 'h' },
     { "run-name",   required_argument, NULL, 'n' },
-    { "allow-indels-and-multiallelics",   no_argument, NULL, 'i' },
+    { "maxMissing", required_argument, NULL, 'm' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -54,10 +49,10 @@ namespace opt
     //
     static string annotFile;
     static string runName = "";
-    static int fixedWindowSize = 10000;
+    static int physicalWindowSize = 10000;
     static int windowSize = 20;
     static int windowStep = 10;
-    static bool allowIndels = false;
+    static double maxMissing = 0.2;
 }
 
 
@@ -65,16 +60,15 @@ int PBSmain(int argc, char** argv) {
     parsePBSoptions(argc, argv);
     
     // Get the sample sets
-    SetInformation setInfo(opt::setsFile);
+    SetInformation setInfo(opt::setsFile, MIN_SETS);
     
     // Initialise the PBS trios
-    PBStrios t(opt::PBStriosFile, opt::runName, opt::windowSize, opt::windowStep, opt::fixedWindowSize, !opt::annotFile.empty());
+    PBStrios t(opt::PBStriosFile, opt::runName, opt::windowSize, opt::windowStep, opt::physicalWindowSize, !opt::annotFile.empty());
     
     // Load up the annotation file if provided
     Annotation wgAnnotation(opt::annotFile, false);
     
-    int currentWindowStart = 0; int currentWindowEnd = currentWindowStart + opt::fixedWindowSize;
-    std::string currentGene = ""; std::string previousGene = "";
+    int currentWindowStart = 0; int currentWindowEnd = currentWindowStart + opt::physicalWindowSize;
     
     std::vector<std::string> fields;
     std::clock_t startTime = std::clock();
@@ -93,11 +87,8 @@ int PBSmain(int argc, char** argv) {
         } else {
             totalVariantNumber++;
             if (totalVariantNumber % reportProgressEvery == 0) reportProgessVCF(totalVariantNumber, startTime);
-            
             fields = split(line, '\t');
-            
             VariantInfo v(fields); if (v.onlyIndel) continue; // Only consider SNPs
-            
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             
             GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
@@ -106,79 +97,48 @@ int PBSmain(int argc, char** argv) {
             // std::cerr << "Here:" << totalVariantNumber << std::endl;
             
             // find if we are in a gene:
-            std::vector<string> SNPgeneDetails = wgAnnotation.getSNPgeneDetails(v.chr, v.posInt);
-            if (SNPgeneDetails[0] != "") {
-                currentGene = SNPgeneDetails[0];
-                if (previousGene == "") previousGene = currentGene;
-            }
-            
-            // Check if we are still in the same physical window...
-            if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
-                for (int i = 0; i != t.trios.size(); i++) {
-                    int nFwSNPs1 = (int)t.resultsPhysicalWindows[i][0].size(); int nFwSNPs2 = (int)t.resultsPhysicalWindows[i][1].size(); int nFwSNPs3 = (int)t.resultsPhysicalWindows[i][2].size();
-                    double PBSfw1 = 0; if (nFwSNPs1 > 0) { PBSfw1 = vector_average(t.resultsPhysicalWindows[i][0]); }
-                    double PBSfw2 = 0; if (nFwSNPs2 > 0) { PBSfw2 = vector_average(t.resultsPhysicalWindows[i][1]); }
-                    double PBSfw3 = 0; if (nFwSNPs3 > 0) { PBSfw3 = vector_average(t.resultsPhysicalWindows[i][2]); }
-                    *t.outFilesFixedWindow[i] << v.chr << "\t" << currentWindowStart << "\t" << currentWindowEnd << "\t" << PBSfw1 << "\t" << PBSfw2 << "\t" << PBSfw3 << "\t" << nFwSNPs1 << "\t" << nFwSNPs2 << "\t" << nFwSNPs3 << std::endl;
-                    t.resultsPhysicalWindows[i][0].clear(); t.resultsPhysicalWindows[i][1].clear(); t.resultsPhysicalWindows[i][2].clear();
-                }
-                if (v.posInt > currentWindowEnd) {
-                    currentWindowStart = currentWindowStart + opt::fixedWindowSize; currentWindowEnd = currentWindowEnd + opt::fixedWindowSize;
-                } else if (v.posInt < currentWindowStart) {
-                    currentWindowStart = 0; currentWindowEnd = 0 + opt::fixedWindowSize;
-                }
-            }
+            if (wgAnnotation.initialised) wgAnnotation.getSNPgeneDetails(v.chr, v.posInt);
             
             // std::cerr << coord << "\t";
             // print_vector_stream(SNPgeneDetails, std::cerr);
             // Now calculate the PBS stats:
-            for (int i = 0; i != t.trios.size(); i++) {
-                string set1 = t.trios[i][0]; string set2 = t.trios[i][1]; string set3 = t.trios[i][2];
+            for (int i = 0; i != t.getTrios().size(); i++) {
+                string set1 = t.getTrios()[i][0]; string set2 = t.getTrios()[i][1]; string set3 = t.getTrios()[i][2];
                 
-                double p1 = c->setAAFs.at(set1)[0]; //assert(p_S1 == pS1test);
-                if (p1 == -1) continue;  // If any member of the trio has entirely missing data, just move on to the next trio
-                double p2 = c->setAAFs.at(set2)[0]; //assert(p_S2 == pS2test);
-                if (p2 == -1) continue;
-                double p3 = c->setAAFs.at(set3)[0]; // assert(p_S3 == pS3test);
-                if (p3 == -1) continue;
-                
-                if (p1 == 0 && p2 == 0 && p3 == 0) { continue; }
-                if (p1 == 1 && p2 == 1 && p3 == 1) { continue; }
-                t.usedVars[i]++;
+                double p1 = c->setAAFs.at(set1)[0];
+                double p2 = c->setAAFs.at(set2)[0];
+                double p3 = c->setAAFs.at(set3)[0];
                 
                 int n1 = c->setRefCounts.at(set1) + c->setAltAlleleCounts.at(set1)[0];
                 int n2 = c->setRefCounts.at(set2) + c->setAltAlleleCounts.at(set2)[0];
                 int n3 = c->setRefCounts.at(set3) + c->setAltAlleleCounts.at(set3)[0];
                 
+                if (bTrioInformativeThisSNP(p1,p2,p3,n1,n2,n3,set1,set2,set3,setInfo,opt::maxMissing)) t.usedVars[i]++;
+                else continue;
                 
-                std::vector<double> thisSNP_PBS = calculatePBSfromAFs(p1,p2,p3,n1,n2,n3);
+                std::vector<double> thisSNP_PBS = calculatePBSfromAFs(p1,p2,p3,n1,n2,n3); 
                 
-                t.resultsSNPwindows[i][0].push_back(thisSNP_PBS[0]); t.resultsSNPwindows[i][1].push_back(thisSNP_PBS[1]); t.resultsSNPwindows[i][2].push_back(thisSNP_PBS[2]);
-                t.resultsSNPwindows[i][3].push_back((double)v.posInt);
-                t.resultsSNPwindows[i][0].pop_front(); t.resultsSNPwindows[i][1].pop_front(); t.resultsSNPwindows[i][2].pop_front(); t.resultsSNPwindows[i][3].pop_front();
+                t.addSNPresultsToWindows(i,thisSNP_PBS,v.posInt);
                 
-                t.resultsPhysicalWindows[i][0].push_back(thisSNP_PBS[0]); t.resultsPhysicalWindows[i][1].push_back(thisSNP_PBS[1]); t.resultsPhysicalWindows[i][2].push_back(thisSNP_PBS[2]);
+                if (wgAnnotation.currentGene != "") t.addSNPresultsToGene(i, thisSNP_PBS, wgAnnotation);
                 
-                if (!opt::annotFile.empty()) { if (SNPgeneDetails[0] != "") {
-                    if (SNPgeneDetails[1] == "exon") {
-                        t.resultsGenes[i][0].push_back(thisSNP_PBS[0]); t.resultsGenes[i][1].push_back(thisSNP_PBS[1]); t.resultsGenes[i][2].push_back(thisSNP_PBS[2]);
-                    } else if (SNPgeneDetails[1] == "intron") {
-                        t.resultsGenes[i][3].push_back(thisSNP_PBS[0]); t.resultsGenes[i][4].push_back(thisSNP_PBS[1]); t.resultsGenes[i][5].push_back(thisSNP_PBS[2]);
-                    } else if (SNPgeneDetails[1] == "promoter") {
-                        t.resultsGenes[i][6].push_back(thisSNP_PBS[0]); t.resultsGenes[i][7].push_back(thisSNP_PBS[1]); t.resultsGenes[i][8].push_back(thisSNP_PBS[2]);
-                    }
-                }}
-                
+                // Check if we are at the step if the SNP window:
                 if (t.usedVars[i] > opt::windowSize && (t.usedVars[i] % opt::windowStep == 0)) {
                     // std::cerr << PBSresults[i][0][0] << std::endl;
                     *t.outFiles[i] << v.chr << "\t" << (int)t.resultsSNPwindows[i][3][0] << "\t" << v.posInt << "\t" << vector_average(t.resultsSNPwindows[i][0]) << "\t" << vector_average(t.resultsSNPwindows[i][1]) << "\t" << vector_average(t.resultsSNPwindows[i][2]) << std::endl;
                 }
-                // }
+                
+                // Check if we are still in the same physical window:
+                if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
+                    t.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, currentWindowStart, currentWindowEnd);
+                }
+                
+                // Check if we are still in the same gene:
+                if (wgAnnotation.bUpdateGene() == true) {
+                    t.summariseAndOutputPerGene(i, wgAnnotation.previousGene);
+                    wgAnnotation.previousGene = wgAnnotation.currentGene;
+                }
             }
-            if (!opt::annotFile.empty()) { if (previousGene != "" && currentGene != previousGene) {
-                t.summariseAndOutputPerGene(previousGene);
-                previousGene = currentGene;
-            }}
             
             delete c;
         }
@@ -187,8 +147,6 @@ int PBSmain(int argc, char** argv) {
     return 0;
     
 }
-
-
 
 void parsePBSoptions(int argc, char** argv) {
     bool die = false; string regionArgString; std::vector<string> regionArgs;
@@ -199,14 +157,14 @@ void parsePBSoptions(int argc, char** argv) {
         switch (c)
         {
             case '?': die = true; break;
-            case 'f': arg >> opt::fixedWindowSize; break;
+            case 'f': arg >> opt::physicalWindowSize; break;
             case 'w':
                 windowSizeStep = split(arg.str(), ',');
                 opt::windowSize = atoi(windowSizeStep[0].c_str());
                 opt::windowStep = atoi(windowSizeStep[1].c_str());
                 break;
             case 'n': arg >> opt::runName; break;
-            case 'i': opt::allowIndels = true; break;
+            case 'm': arg >> opt::maxMissing; break;
             case OPT_ANNOT: arg >> opt::annotFile; break;
             case 'h':
                 std::cout << PBS_USAGE_MESSAGE;
@@ -236,16 +194,31 @@ void parsePBSoptions(int argc, char** argv) {
     
 }
 
-void PBStrios::summariseAndOutputPerGene(string geneName) {
-    for (int i = 0; i != trios.size(); i++) {
-        int nExonSNPs = (int)resultsGenes[i][0].size(); int nIntronSNPs = (int)resultsGenes[i][3].size(); int nPromoterSNPs = (int)resultsGenes[i][6].size();
-        double ExonPBS1 = 0; double ExonPBS2 = 0; double ExonPBS3 = 0;
-        if (nExonSNPs > 0) { ExonPBS1 = vector_average(resultsGenes[i][0]); ExonPBS2 = vector_average(resultsGenes[i][1]); ExonPBS3 = vector_average(resultsGenes[i][2]);}
-        double IntronPBS1 = 0; double IntronPBS2 = 0; double IntronPBS3 = 0;
-        if (nIntronSNPs > 0) { IntronPBS1 = vector_average(resultsGenes[i][3]); IntronPBS2 = vector_average(resultsGenes[i][4]); IntronPBS3 = vector_average(resultsGenes[i][5]);}
-        double PromoterPBS1 = 0; double PromoterPBS2 = 0; double PromoterPBS3 = 0;
-        if (nPromoterSNPs > 0) { PromoterPBS1 = vector_average(resultsGenes[i][6]); PromoterPBS2 = vector_average(resultsGenes[i][7]); PromoterPBS3 = vector_average(resultsGenes[i][8]);}
-        *outFilesGenes[i] << geneName << "\t" << nExonSNPs << "\t" << nIntronSNPs << "\t" << nPromoterSNPs << "\t" << ExonPBS1 << "\t" << ExonPBS2 << "\t" << ExonPBS3 << "\t" << IntronPBS1 << "\t" << IntronPBS2 << "\t" << IntronPBS3 << "\t" << PromoterPBS1 << "\t" << PromoterPBS2 << "\t" << PromoterPBS3 << std::endl;
-        for (int j = 0; j <= 8; j++) { resultsGenes[i][j].clear(); }
-    }
+
+bool bTrioInformativeThisSNP(const double p1, const double p2, const double p3,
+                             const int n1, const int n2, const int n3,
+                             const string set1, const string set2, const string set3,
+                             const SetInformation& setInfo,
+                             const double maxMissing) {
+    
+    bool bDataInformative = true;
+    
+    // Missing allele frequencies
+    if (p1 == -1) bDataInformative = false;
+    if (p2 == -1) bDataInformative = false;
+    if (p3 == -1) bDataInformative = false;
+    
+    // Uniformative allele frequencies
+    if (p1 == 0 && p2 == 0 && p3 == 0) bDataInformative = false;
+    if (p1 == 1 && p2 == 1 && p3 == 1) bDataInformative = false;
+    
+    
+    // Too much missingness based on user threshold
+    if (n1 <= 1 || n2 <= 1 || n3 <= 1) bDataInformative = false;
+    int set1FullSize = ploidy*(int)setInfo.popToPosMap.at(set1).size();
+    int set2FullSize = ploidy*(int)setInfo.popToPosMap.at(set2).size();
+    int set3FullSize = ploidy*(int)setInfo.popToPosMap.at(set2).size();
+    if ( (double)n1/set1FullSize <= (1 - maxMissing) || (double)n2/set2FullSize <= (1 - maxMissing) || (double)n3/set3FullSize <= (1 - maxMissing) ) bDataInformative = false;
+    
+    return bDataInformative;
 }

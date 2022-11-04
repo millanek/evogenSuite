@@ -13,12 +13,13 @@
 #include "UtilsStats.hpp"
 #include "UtilsSetCounts.hpp"
 #include "UtilsSetInfo.hpp"
+#include "UtilsPopulationComparisons.hpp"
 #include <math.h>
 
 void parseFstOptions(int argc, char** argv);
 int fstMain(int argc, char** argv);
 bool bPairInformativeThisSNP(const double p1, const double p2, const int n1, const int n2,
-                             const int set1FullSize, const int set2FullSize);
+                             const int set1FullSize, const int set2FullSize, const double maxMissing);
 
 
 inline double calculateFstNumerator(const double p1, const double p2, const int n1, const int n2) {
@@ -59,18 +60,22 @@ inline double calculateExpectedHeterozygosityNei78(const double p, const int n) 
 #define iPi2 4
 #define iCoord 5
 
-class FstPairs {
+// Define sizes of scan result containers:
+// 1) for Fst numerator; 2) Fst denominator;
+// 3) Dxy; 4) set1 heterozygosity; 5) set2 heterozygosity, and
+// 6) is for the coordinates
+#define NumFstSNPWindowDeques 6
+#define NumFstPhysicalWindowVectors 5
+#define NumFstGeneResultVectors 6   // Three Fst values per gene: exons, introns, promoter; keeping Fst numerator and Fst denominator for each
+
+class FstPairs : public PopulationComparisons {
 public:
     
-    FstPairs(const string& FstPairsFileName, const string& runName, const int windowSize, const int windowStep, const int fixedWindowSize, const bool bAnnotationPresent) {
-        std::ifstream* FstPairsFile = new std::ifstream(FstPairsFileName.c_str());
-        if (FstPairsFile->fail()) {
-            std::cerr << "ERROR: The file " << FstPairsFileName << " could not be opened\n";
-            exit(1);
-        }
+    FstPairs(const string& FstPairsFileName, const string& runName, const int windowSize, const int windowStep, const int fixedWindowSize, const bool bAnnotationPresent, const bool bMakeRegionsBed, const double regionBedMin, const bool bRecombMapPresent) : PopulationComparisons(FstPairsFileName) {
+        
         std::cout << "\nCalculating statistics for the set pair(s):\n";
         string line;
-        while (getline(*FstPairsFile,line)) {
+        while (getline(*ComparisonsFile,line)) {
             // std::cerr << line << std::endl;
             std::vector<string> twoPops = split(line, '\t'); assert(twoPops.size() == 2);
             print_vector(twoPops, std::cout);
@@ -78,39 +83,72 @@ public:
             std::ofstream* outFileFixedWindow = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_" +  "_Fst_" + runName + "_FW" + numToString(fixedWindowSize) + ".txt");
             
             string fstOufileHeader = "chr\twStart\twEnd\tFst\tDxy\t" + twoPops[0] + "_pi\t" + twoPops[1] + "_pi\tAccessible_bp\n";
-            *outFile << fstOufileHeader; *outFileFixedWindow << fstOufileHeader;
+            *outFile << fstOufileHeader;
+            if (bRecombMapPresent) *outFile << "\t" << "mean_r";
+            
+            *outFileFixedWindow << fstOufileHeader;
             outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
             outFiles.push_back(outFile); outFilesFixedWindow.push_back(outFileFixedWindow);
       
-            /*     if (bAnnotationPresent) {
-                std::ofstream* outFileGenes = new std::ofstream(threePops[0] + "_" + threePops[1] + "_" + threePops[2]+ "_PBSGenes_" + runName + "_" + numToString(windowSize) + "_" + numToString(windowStep) + ".txt");
-                *outFileGenes << "gene\t" << "numSNPsExons\tnumSNPsIntrons\tnumSNPs3kbPromoter\t" << threePops[0] << "_exons\t" << threePops[1] << "_exons\t" << threePops[2] << "_exons\t" << threePops[0] << "_wIntrons\t" << threePops[1] << "_wIntrons\t" << threePops[2] << "_wIntrons\t" << threePops[0] << "_promoter\t" << threePops[1] << "_promoter\t" << threePops[2] << "_promoter" << std::endl;
+            if (bAnnotationPresent) {
+                std::ofstream* outFileGenes = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_Fst_" + runName + "_" + numToString(windowSize) + "_" + numToString(windowStep) + ".txt");
+                *outFileGenes << "gene\t" << "numSNPsExons\tnumSNPsIntrons\tnumSNPsPromoter\texons\twIntrons\tpromoter\n" << std::endl;
                 outFilesGenes.push_back(outFileGenes);
-            }*/
-            pairs.push_back(twoPops);
+            }
+            
+            if (bMakeRegionsBed) {
+                std::ofstream* outFileRegions = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_FstAbove_" +  numToString(regionBedMin) + "_" + runName + "_" + numToString(windowSize) + "_" + numToString(windowStep) + ".txt");
+                outFilesRegions.push_back(outFileRegions);
+            }
+            
+            comparisons.push_back(twoPops);
         }
         
         // Need to prepare the vectors to hold the PBS values and the coordinates:
-        initResultsSNPwindows(windowSize);
-        initResultsPhysicalWindows();
-        if (bAnnotationPresent) initResultsGenes();
+        initResultsSNPwindows(windowSize, NumFstSNPWindowDeques);
+        initResultsPhysicalWindows(NumFstPhysicalWindowVectors);
+        if (bAnnotationPresent) initResultsGenes(NumFstGeneResultVectors);
         
-        usedVars.resize(pairs.size(),0);
+        usedVars.resize(comparisons.size(),0);
     };
     
-    std::vector<std::vector<string> > pairs;
+    std::vector<std::vector<string> > getPairs(){ return comparisons;} // name the method whatever you like.
+
     
-    std::vector<std::ofstream*> outFiles;
-    std::vector<std::ofstream*> outFilesFixedWindow;
-    std::vector<std::ofstream*> outFilesGenes;
+    void addSNPresultsToGene(const int trioNumber, double thisSNPFstNumerator,double thisSNPFstDenominator, const Annotation& a) {
+        
+        if (a.SNPcategory == "exon") {
+            resultsGenes.at(trioNumber)[0].push_back(thisSNPFstNumerator);
+            resultsGenes.at(trioNumber)[1].push_back(thisSNPFstDenominator);
+        } else if (a.SNPcategory == "intron") {
+            resultsGenes.at(trioNumber)[2].push_back(thisSNPFstNumerator);
+            resultsGenes.at(trioNumber)[3].push_back(thisSNPFstDenominator);
+        } else if (a.SNPcategory == "promoter") {
+            resultsGenes.at(trioNumber)[4].push_back(thisSNPFstNumerator);
+            resultsGenes.at(trioNumber)[5].push_back(thisSNPFstDenominator);
+        }
+    }
     
-    std::vector<int> usedVars;          // Will count the number of used variants for each trio
     
-    std::vector<std::vector<std::deque<double>>> resultsSNPwindows;
-    std::vector<std::vector<std::vector<double>>> resultsPhysicalWindows;
-    std::vector<std::vector<std::vector<double>>> resultsGenes;
-    
-    void summariseAndOutputPerGene(string geneName);
+    void summariseAndOutputPerGene(const int trioNumber, const string& geneName) {
+        int nExonSNPs = (int)resultsGenes.at(trioNumber)[0].size();
+        int nIntronSNPs = (int)resultsGenes.at(trioNumber)[1].size();
+        int nPromoterSNPs = (int)resultsGenes.at(trioNumber)[2].size();
+        
+        double ExonFst = 0; if (nExonSNPs > 0)
+            ExonFst = (double) vector_sum(resultsGenes.at(trioNumber)[0]) / vector_sum(resultsGenes.at(trioNumber)[1]);
+        double IntronFst = 0; if (nIntronSNPs > 0)
+            IntronFst = (double) vector_sum(resultsGenes.at(trioNumber)[2]) / vector_sum(resultsGenes.at(trioNumber)[3]);
+        double PromoterFst = 0; if (nPromoterSNPs > 0)
+            PromoterFst = (double) vector_sum(resultsGenes.at(trioNumber)[4]) / vector_sum(resultsGenes.at(trioNumber)[5]);
+        
+        *outFilesGenes[trioNumber] << geneName << "\t" << nExonSNPs << "\t" << nIntronSNPs << "\t" << nPromoterSNPs << "\t" << ExonFst << "\t" << IntronFst << "\t" << PromoterFst << std::endl;
+        
+        for (int j = 0; j < NumFstGeneResultVectors; j++) {
+            resultsGenes.at(trioNumber)[j].clear();
+            resultsGenes.at(trioNumber)[j].shrink_to_fit();
+        }
+    }
     
     void addSNPresultsToWindows(const int pairNumber, const double thisSNPFstNumerator, const double thisSNPFstDenominator, const double thisSNPDxy, const double thisSNPpi1, const double thisSNPpi2, const int SNPcoordinate) {
         
@@ -128,7 +166,7 @@ public:
         resultsPhysicalWindows[pairNumber][4].push_back(thisSNPpi2);
     }
     
-    void finalizeAndOutputSNPwindow(const int pairNumber, const string chr, const int currentSNPcoordinate, const AccessibleGenome* ag) {
+    void finalizeAndOutputSNPwindow(const int pairNumber, const string chr, const int currentSNPcoordinate, const AccessibleGenome* ag, const RecombinationMap* r) {
         // The starting coordinate of this window
         int startCoord = (int)resultsSNPwindows[pairNumber][iCoord][0];
         if (startCoord < currentSNPcoordinate) {
@@ -145,7 +183,14 @@ public:
             double Pi1 = vector_average_withRegion(resultsSNPwindows[pairNumber][iPi1], accessibleInThisWindow);
             double Pi2 = vector_average_withRegion(resultsSNPwindows[pairNumber][iPi2], accessibleInThisWindow);
             
-            *outFiles[pairNumber] << chr << "\t" << (int)startCoord << "\t" << currentSNPcoordinate << "\t" << Fst << "\t" << Dxy << "\t" << Pi1 << "\t" << Pi2 << "\t" << accessibleInThisWindow << std::endl;
+            *outFiles[pairNumber] << chr << "\t" << (int)startCoord << "\t" << currentSNPcoordinate << "\t" << Fst << "\t" << Dxy << "\t" << Pi1 << "\t" << Pi2 << "\t" << accessibleInThisWindow;
+            
+            if (r->initialised) {
+                double meanRecomb = r->getMeanRecombinationRate(chr, startCoord, currentSNPcoordinate);
+                *outFiles[pairNumber] << "\t" << meanRecomb;
+            }
+            
+            *outFiles[pairNumber] << std::endl;
         }
     }
     
@@ -198,31 +243,6 @@ public:
         }
     }
     
-    
-    
-    private:
-        void initResultsSNPwindows(const int windowSize) {
-            std::deque<double> initDeq(windowSize,0.0); // deque to initialise per-site result values
-            // vector of five per-site deques:
-            // 1) for Fst numerator; 2) Fst denominator;
-            // 3) Dxy; 4) set1 heterozygosity; 5) set2 heterozygosity, and
-            // 6) is for the coordinates
-            std::vector<std::deque<double>> initSixDeques(6,initDeq);
-            std::vector<std::vector<std::deque<double>>> scanResults(pairs.size(),initSixDeques);
-            resultsSNPwindows = scanResults;
-        }
-        
-        void initResultsPhysicalWindows() {
-            std::vector<std::vector<double>> initVectorFixed(5);
-            std::vector<std::vector<std::vector<double>>> PBSfixedWindowResults(pairs.size(),initVectorFixed);
-            resultsPhysicalWindows = PBSfixedWindowResults;
-        }
-        
-        void initResultsGenes() {
-            std::vector<std::vector<double>> initGeneVectors(9); // For the nine PBS columns in the _PBSGenes_ files
-            std::vector<std::vector<std::vector<double>>> PBSgeneResults(pairs.size(),initGeneVectors);
-            resultsGenes = PBSgeneResults;
-        }
 };
 
 #endif /* Fst_hpp */

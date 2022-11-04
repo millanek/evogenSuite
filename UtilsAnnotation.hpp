@@ -183,11 +183,20 @@ public:
             annotationMap = loadAnnotationMap(annotFile, includePartial);
             getWgGeneTranscriptCounts();
             annotateGeneStartsEnds();
+            initialised = true;
+            
         }
     }
     
     std::map<std::string, std::vector<std::vector<std::string> > > annotationMap;
     std::map<string, int> geneTranscriptCounts;  // How many transcripts has each gene
+    bool initialised = false;
+    
+    // For tracking as we go though the VCF
+    string previousGene = "";
+    string currentGene = "";
+    string SNPcategory = "";
+    bool bInGene = false;
     
     string getCategoryOfSNP(const string& SNPscaffold, const string& SNPlocus) {
         string SNPcategory = "other non-coding";
@@ -215,7 +224,12 @@ public:
         return SNPcategory;
     }
     
-    std::vector<string> getSNPgeneDetails(const string& SNPscaffold, const int SNPlocus);
+    void getSNPgeneDetails(const string& SNPscaffold, const int SNPlocus);
+    
+    bool bUpdateGene() {
+        if (currentGene != "" && previousGene != "" && currentGene != previousGene) return true;
+        else return false;
+    }
     
     
     int getTranscriptCount(const std::string& geneOrTranscript) {
@@ -342,11 +356,14 @@ class BedCoordinateFeatures {
 public:
     BedCoordinateFeatures() : initialised(false) {};
     
-    BedCoordinateFeatures(std::ifstream*& bedFile, bool debug = false) {
-        BedFeatureMap = loadBedFeatureMap(bedFile, debug);
+    BedCoordinateFeatures(std::ifstream*& bedFile, bool hasValues = false, bool leftCoordOneIndexed = false, bool debug = false) {
+        loadBedFeatureMap(bedFile, leftCoordOneIndexed,hasValues, debug);
         initialised = true;
     }
+    
     bool initialised;
+    std::map<std::string, std::vector<std::vector<int> > > BedFeatureMap;
+    std::map<std::string, std::vector<double> > BedFeatureValueMap;
 
     
     // Count how much of a genomic interval is covered by the bed features (returns the number of basepairs)
@@ -403,6 +420,54 @@ public:
         }
     }
     
+    double getMeanValueInRegion(const string& scaffold, const int start, const int end) const {
+        assert(start < end);
+        try {
+            std::vector<std::vector<int> > featuresThisSc = BedFeatureMap.at(scaffold);
+            std::vector<double> valuesThisScaffold = BedFeatureValueMap.at(scaffold);
+            
+            std::cerr << "There are " << valuesThisScaffold.size() << " values" << std::endl;
+            //std::cerr << "Starts: " << std::endl;
+            //print_vector(featuresThisSc[0], std::cerr);
+            //std::cerr << "Ends: " << std::endl;
+            
+            // Binary search to find the first feature whose end coordinate is greater
+            // or equal to the start of the region in question
+            std::vector<int>::iterator itStart = lower_bound(featuresThisSc[1].begin(),featuresThisSc[1].end(),start);
+            int numBPtotal = 0; int numBPthisFeature = 0;
+            double sumPerBPvalues = 0; double meanValue = NAN;
+            if (itStart != featuresThisSc[1].end()) {  // if (start < f[1])    ---  excludind case 1)
+                std::vector<int>::size_type index = std::distance(featuresThisSc[1].begin(), itStart);
+                
+                // Sum the lengths
+                while (featuresThisSc[0][index] <= end && index < featuresThisSc[0].size()) { // if (f[0] >= end)   ---    ecluding case 2)
+                    double valueThisFeature = valuesThisScaffold[index];
+                    if (featuresThisSc[0][index] < start && featuresThisSc[1][index] <= end)
+                        numBPthisFeature = (featuresThisSc[1][index] - start) + 1;
+                    else if (featuresThisSc[0][index] >= start && featuresThisSc[1][index] <= end)
+                        numBPthisFeature = (featuresThisSc[1][index] - featuresThisSc[0][index]);
+                    else if (featuresThisSc[0][index] >= start && featuresThisSc[1][index] > end)
+                        numBPthisFeature = (end - featuresThisSc[0][index]);
+                    else if (featuresThisSc[0][index] < start && featuresThisSc[1][index] > end)
+                        numBPthisFeature = (end - start) + 1;
+                    
+                    std::cerr << "numBPthisFeature: " << numBPthisFeature << std::endl;
+                    std::cerr << "valueThisFeature: " << valueThisFeature << std::endl;
+                    index++;
+                    sumPerBPvalues += (valueThisFeature * numBPthisFeature);
+                    std::cerr << "sumPerBPvalues: " << sumPerBPvalues << std::endl;
+                    numBPtotal += numBPthisFeature;
+                }
+                meanValue = (double)sumPerBPvalues/numBPtotal;
+            }
+            return meanValue;
+        } catch (const std::out_of_range& oor) {
+            //std::cerr << "No features on scaffold: " << scaffold << std::endl;
+            return NAN;
+        }
+    }
+    
+    
     std::vector<std::vector <string> > getFeaturesinRegion(const string& scaffold, const int start, const int end) {
         std::vector<std::vector <string> > allFeatures;
         try {
@@ -457,14 +522,12 @@ public:
         }
     }
     
-    std::map<std::string, std::vector<std::vector<int> > > BedFeatureMap;
-    
     // Load up the file specifying the genomic coordinates (the bed file needs to be sorted by chromosome)
-    std::map<string, std::vector<std::vector<int> > > loadBedFeatureMap(std::ifstream*& bedFile, bool debug) {
-        std::map<string, std::vector<std::vector<int> > > BedFeatureMap;
+    void loadBedFeatureMap(std::ifstream*& bedFile, bool hasValues, bool leftCoordOneIndexed, bool debug) {
         std::vector<std::vector<int> > BedFeaturesThisScaffold;
         std::vector<int> featureStarts;
         std::vector<int> featureEnds;
+        std::vector<double> featureValues;
         string line;
         string previousScaffold = "";
         //std::cerr << "Loading scaffold: " << currentScaffold << std::endl;
@@ -482,10 +545,16 @@ public:
                 BedFeaturesThisScaffold.push_back(featureEnds);
                 BedFeatureMap[previousScaffold] = BedFeaturesThisScaffold;
                 BedFeaturesThisScaffold.clear(); featureStarts.clear(); featureEnds.clear();
+                if (hasValues) {
+                    BedFeatureValueMap[previousScaffold] = featureValues;
+                    featureValues.clear();
+                }
                 // std::cerr << "Loading scaffold: " << currentScaffold << std::endl;
             }
-            featureStarts.push_back(atoi(currentFeature[1].c_str()));
+            int subtractFromLeft = (leftCoordOneIndexed) ? 1 : 0;
+            featureStarts.push_back(atoi(currentFeature[1].c_str()) - subtractFromLeft);
             featureEnds.push_back(atoi(currentFeature[2].c_str()));
+            if (hasValues) featureValues.push_back(stringToDouble(currentFeature[3]));
             // std::cerr << "Loading scaffold: " << currentFeature[0] << "\t" << currentScaffold << std::endl;
             previousScaffold = currentFeature[0];
             //std::cerr << "Loading scaffold: " << currentFeature[0] << "\t" << currentScaffold << std::endl;
@@ -494,7 +563,7 @@ public:
         BedFeaturesThisScaffold.push_back(featureStarts);
         BedFeaturesThisScaffold.push_back(featureEnds);
         BedFeatureMap[previousScaffold] = BedFeaturesThisScaffold;
-        return BedFeatureMap;
+        if (hasValues) BedFeatureValueMap[previousScaffold] = featureValues;
     }
     
 };
@@ -510,7 +579,7 @@ public:
             std::ifstream* accessibleGenomeBedFile = new std::ifstream(bedFileName);
             std::cerr << std::endl;
             std::cerr << "Loading the accessible genome annotation" << std::endl;
-            BedFeatureMap = loadBedFeatureMap(accessibleGenomeBedFile, false);
+            loadBedFeatureMap(accessibleGenomeBedFile, false, false, false);
             std::cerr << "Done" << std::endl;
             initialised = true;
         }
@@ -537,5 +606,29 @@ public:
     }
 
 };
+
+class RecombinationMap : public BedCoordinateFeatures {
+public:
+    RecombinationMap() {};
+    
+    RecombinationMap(const string& bedFileName) {
+        if (!bedFileName.empty()) {
+            std::ifstream* RecombinationMapFile = new std::ifstream(bedFileName);
+            std::cerr << std::endl;
+            std::cerr << "Loading the recombination map" << std::endl;
+            bool hasValues = true; bool leftCoordOneIndexed = true;
+            loadBedFeatureMap(RecombinationMapFile, hasValues, leftCoordOneIndexed, false);
+            std::cerr << "Done" << std::endl;
+            initialised = true;
+        }
+    }
+    
+    double getMeanRecombinationRate(const string& scaffold, const int start, const int end) const {
+        return getMeanValueInRegion(scaffold, start, end);
+    }
+
+};
+
+
 
 #endif /* UtilsAnnotation_hpp */

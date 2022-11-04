@@ -32,6 +32,8 @@ using std::string;
 #define PACKAGE_BUGREPORT "millanek@gmail.com"
 #define GZIP_EXT ".gz"
 
+#define ploidy 2
+
 #define LikelihoodsProbabilitiesAbsent 0
 #define LikelihoodsProbabilitiesGP 1
 #define LikelihoodsProbabilitiesGL 2
@@ -40,6 +42,10 @@ using std::string;
 #define AncestralAlleleMissing -1
 #define AncestralAlleleRef 0
 #define AncestralAlleleAlt 1
+
+#define HelpOption      "       -h, --help                              display this help and exit\n"
+#define RunNameOption   "       -n, --run-name                          run-name will be included in the output file name(s)\n"
+#define MaxMissOption   "       -m MAX --maxMissing=MAX                 (default: 0.2) maximum proportion of missing alleles in any of the used populations\n"
 
 
 // VCF format constant
@@ -57,6 +63,11 @@ inline void reportProgessVCF(const int variantsProcessed, const std::clock_t sta
 inline void printMissingLikelihoodsWarning(const string& chr, const string& pos) {
     std::cerr << "WARNING: Could not find genotype likelihoods/probabilities (GP, PL, or GL fields) for variant at " << chr << " " << pos << std::endl;
     std::cerr << "WARNING: Did you really mean to use the -g option? Reverting to using called genotypes." << std::endl;
+}
+
+inline void notEnoughPopulationsError(const int minPops) {
+    std::cerr << "ERROR: You need at least " << minPops << " sets for this analysis." << std::endl;
+    exit(EXIT_FAILURE);
 }
 
 // -----------------------------------------------------------------------

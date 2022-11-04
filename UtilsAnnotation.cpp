@@ -35,10 +35,10 @@ std::string getReferenceForThisRegion(const std::vector<std::string>& thisRegion
 }
 
 
-std::vector<string> Annotation::getSNPgeneDetails(const string& SNPscaffold, const int SNPlocus) {
-    std::vector<string> SNPgeneDetails;
-    std::vector<string> scaffoldTranscriptStartEnd = transcriptStartEndMap[SNPscaffold];
-    string inGene = ""; string SNPcategory = "nonCoding";
+void Annotation::getSNPgeneDetails(const string& chr, const int SNPlocus) {
+    std::vector<string> scaffoldTranscriptStartEnd = transcriptStartEndMap[chr];
+    
+    string tempCurrentGene = ""; string tempSNPcategory = "nonCoding";
     for (std::vector<std::vector<string> >::size_type i = 0; i != scaffoldTranscriptStartEnd.size(); i++) {
         std::vector<string> startEndVec = split(scaffoldTranscriptStartEnd[i], '\t');
         string thisTranscript = startEndVec[0];
@@ -46,37 +46,41 @@ std::vector<string> Annotation::getSNPgeneDetails(const string& SNPscaffold, con
         //if (SNPlocus == 20001) { print_vector_stream(startEndVec, std::cerr);}
         if (strand == "+") {
             if (SNPlocus >= (geneStart-3000) && SNPlocus < geneStart) {
-                SNPcategory = "promoter"; inGene = thisTranscript;
+                tempSNPcategory = "promoter"; tempCurrentGene = thisTranscript;
                 break;
             }
         } else if (strand == "-") {
             if (SNPlocus > geneEnd && SNPlocus <= (geneEnd+3000)) {
-                SNPcategory = "promoter"; inGene = thisTranscript;
+                tempSNPcategory = "promoter"; tempCurrentGene = thisTranscript;
                 break;
             }
         }
         if (SNPlocus >= geneStart && SNPlocus <= geneEnd) {
             //int numDots = (int)std::count(thisTranscript.begin(), thisTranscript.end(), '.');
-            SNPcategory = "intron";
+            tempSNPcategory = "intron";
             //if (numDots == 4)  inGene = geneFromTranscript(thisTranscript);
-            inGene = thisTranscript;
-            std::vector<string> exons = annotationMapTranscriptMap[SNPscaffold][thisTranscript];
+            tempCurrentGene = thisTranscript;
+            std::vector<string> exons = annotationMapTranscriptMap[chr][thisTranscript];
             // std::cerr << exons.size() << std::endl;
             for (std::vector<string>::size_type j = 0; j != exons.size(); j++) {
                 std::vector<string> exonVec = split(exons[j], '\t');
                 //if (SNPlocus == 20001) { print_vector_stream(exonVec, std::cerr); }
                 if (SNPlocus >= atoi(exonVec[1].c_str()) && SNPlocus <= atoi(exonVec[2].c_str())) {
-                    SNPcategory = "exon";
+                    tempSNPcategory = "exon";
+                    break;
                 }
-                if (SNPcategory == "exon") { break; }
             }
             break;
         }
         //else if (SNPcategory == "intron") { if (inGene != geneFromTranscript(startEndVec[0])) { break; } }
     }
-    SNPgeneDetails.push_back(inGene); SNPgeneDetails.push_back(SNPcategory);
-    return SNPgeneDetails;
-    }
+    
+    currentGene = tempCurrentGene;
+    SNPcategory = tempSNPcategory;
+    
+    // To set the first "previous gene"
+    if (previousGene == "" && currentGene != "") previousGene = currentGene;
+}
 
 
 

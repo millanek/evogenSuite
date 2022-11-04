@@ -10,6 +10,7 @@
 #include "UtilsGeneral.hpp"
 
 #include "AlleleFreq.hpp"
+#include "DistanceMatrix.hpp"
 #include "Fst.hpp"
 #include "PBS.hpp"
 
@@ -45,7 +46,6 @@
 #include "evo_diversity_subsampling.h"
 #include "remove_lowercase.h"
 #include "evo_permute_codons.h"
-#include "evo_PBS.h"
 #include "evo_ABS.h"
 #include "evo_FstAgainstAll.h"
 #include "evo_combineVCFs.h"
@@ -79,8 +79,9 @@ static const char *USAGE_MESSAGE =
 "Usage: " PROGRAM_BIN " <command> [options]\n\n"
 "Commands:\n"
 "           AlleleFreq          Calculate allele frequencies per population\n"
-"           Fst                 Calculating Fst values\n"
-"           PBS                 Calculating the population branch statistics (looking for positive selection)\n"
+"           Fst                 Calculating Fst values in windows and per-gene\n"
+"           GlobalPairStats     Calculating global (e.g. genome-wide) statistics from a VCF file. Main output is a distance matrix.\n"
+"           PBS                 Calculating the Population Branch Statistics in windows and per-gene\n"
 "\nReport bugs to " PACKAGE_BUGREPORT "\n\n";
 
 int main(int argc, char **argv) {
@@ -108,6 +109,8 @@ int main(int argc, char **argv) {
             AFmain(argc - 1, argv + 1);
         else if(command == "Fst")
             fstMain(argc - 1, argv + 1);
+        else if(command == "GlobalPairs")
+            globalStatsMain(argc - 1, argv + 1);
         else if(command == "PBS")
             PBSmain(argc - 1, argv + 1);
         else
