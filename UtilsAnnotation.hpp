@@ -426,7 +426,7 @@ public:
             std::vector<std::vector<int> > featuresThisSc = BedFeatureMap.at(scaffold);
             std::vector<double> valuesThisScaffold = BedFeatureValueMap.at(scaffold);
             
-            std::cerr << "There are " << valuesThisScaffold.size() << " values" << std::endl;
+          //  std::cerr << "There are " << valuesThisScaffold.size() << " values" << std::endl;
             //std::cerr << "Starts: " << std::endl;
             //print_vector(featuresThisSc[0], std::cerr);
             //std::cerr << "Ends: " << std::endl;
@@ -451,14 +451,15 @@ public:
                     else if (featuresThisSc[0][index] < start && featuresThisSc[1][index] > end)
                         numBPthisFeature = (end - start) + 1;
                     
-                    std::cerr << "numBPthisFeature: " << numBPthisFeature << std::endl;
-                    std::cerr << "valueThisFeature: " << valueThisFeature << std::endl;
+                  //  std::cerr << "numBPthisFeature: " << numBPthisFeature << std::endl;
+                  //  std::cerr << "valueThisFeature: " << valueThisFeature << std::endl;
                     index++;
                     sumPerBPvalues += (valueThisFeature * numBPthisFeature);
-                    std::cerr << "sumPerBPvalues: " << sumPerBPvalues << std::endl;
+                  //  std::cerr << "sumPerBPvalues: " << sumPerBPvalues << std::endl;
                     numBPtotal += numBPthisFeature;
                 }
                 meanValue = (double)sumPerBPvalues/numBPtotal;
+                //std::cerr << "meanValue: " << meanValue << std::endl;
             }
             return meanValue;
         } catch (const std::out_of_range& oor) {
@@ -533,6 +534,15 @@ public:
         //std::cerr << "Loading scaffold: " << currentScaffold << std::endl;
         while (getline(*bedFile, line)) {
             std::vector<string> currentFeature = split(line, '\t');
+            if (hasValues) {
+                if (currentFeature.size() < 4) {
+                    std::cerr << "ERROR: The file must have at least four columns\n"; exit(1);
+                }
+            } else {
+                if (currentFeature.size() < 3) {
+                    std::cerr << "ERROR: The file must have at least three columns\n"; exit(1);
+                }
+            }
             if (currentFeature[0] != previousScaffold && previousScaffold != "") {
                 if (debug) {
                     std::cerr << "Loading scaffold: " << previousScaffold << std::endl;

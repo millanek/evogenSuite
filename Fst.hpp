@@ -82,12 +82,13 @@ public:
             std::ofstream* outFile = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_Fst_" + runName + "_" + numToString(windowSize) + "_" + numToString(windowStep) + ".txt");
             std::ofstream* outFileFixedWindow = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_" +  "_Fst_" + runName + "_FW" + numToString(fixedWindowSize) + ".txt");
             
-            string fstOufileHeader = "chr\twStart\twEnd\tFst\tDxy\t" + twoPops[0] + "_pi\t" + twoPops[1] + "_pi\tAccessible_bp\n";
+            string fstOufileHeader = "chr\twStart\twEnd\tFst\tDxy\t" + twoPops[0] + "_pi\t" + twoPops[1] + "_pi\tAccessible_bp";
             *outFile << fstOufileHeader;
             if (bRecombMapPresent) *outFile << "\t" << "mean_r";
+            *outFile << "\n";
             
             *outFileFixedWindow << fstOufileHeader;
-            outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
+            //outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
             outFiles.push_back(outFile); outFilesFixedWindow.push_back(outFileFixedWindow);
       
             if (bAnnotationPresent) {
@@ -187,6 +188,7 @@ public:
             
             if (r->initialised) {
                 double meanRecomb = r->getMeanRecombinationRate(chr, startCoord, currentSNPcoordinate);
+                // std::cerr << "meanRecomb: " << meanRecomb << std::endl;
                 *outFiles[pairNumber] << "\t" << meanRecomb;
             }
             
