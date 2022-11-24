@@ -167,7 +167,7 @@ public:
         resultsPhysicalWindows[pairNumber][4].push_back(thisSNPpi2);
     }
     
-    void finalizeAndOutputSNPwindow(const int pairNumber, const string chr, const int currentSNPcoordinate, const AccessibleGenome* ag, const RecombinationMap* r) {
+    void finalizeAndOutputSNPwindow(const int pairNumber, const string chr, const int currentSNPcoordinate, const AccessibleGenome* ag, const RecombinationMap* r, const bool bZeroRounding) {
         // The starting coordinate of this window
         int startCoord = (int)resultsSNPwindows[pairNumber][iCoord][0];
         if (startCoord < currentSNPcoordinate) {
@@ -179,7 +179,7 @@ public:
                 accessibleInThisWindow = windowLength;
             }
             
-            double Fst = calculateFst(resultsSNPwindows[pairNumber][iFstNum], resultsSNPwindows[pairNumber][iFstDenom]);
+            double Fst = calculateFst(resultsSNPwindows[pairNumber][iFstNum], resultsSNPwindows[pairNumber][iFstDenom], bZeroRounding);
             double Dxy = vector_average_withRegion(resultsSNPwindows[pairNumber][iDxy], accessibleInThisWindow);
             double Pi1 = vector_average_withRegion(resultsSNPwindows[pairNumber][iPi1], accessibleInThisWindow);
             double Pi2 = vector_average_withRegion(resultsSNPwindows[pairNumber][iPi2], accessibleInThisWindow);
@@ -197,7 +197,7 @@ public:
     }
     
     
-    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const int currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd) {
+    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const int currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd, const bool bZeroRounding) {
         
         if (thisWindowStart < currentSNPcoord) { // As long as the current SNP coord is more than the previous (i.e., we are on the same chromosome; I should check this properly
             int accessibleInThisWindow;
@@ -212,7 +212,7 @@ public:
             double thisFixedWindowPi1 = 0; double thisFixedWindowPi2 = 0;
             int nFwSNPs = (int)resultsPhysicalWindows[pairNumber][iFstNum].size();
             if (nFwSNPs > 0) {
-                thisFixedWindowFst = calculateFst(resultsPhysicalWindows[pairNumber][iFstNum], resultsPhysicalWindows[pairNumber][iFstDenom]);
+                thisFixedWindowFst = calculateFst(resultsPhysicalWindows[pairNumber][iFstNum], resultsPhysicalWindows[pairNumber][iFstDenom],bZeroRounding);
                 thisFixedWindowDxy = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iDxy], accessibleInThisWindow);
                 thisFixedWindowPi1 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi1], accessibleInThisWindow);
                 thisFixedWindowPi2 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi2], accessibleInThisWindow);

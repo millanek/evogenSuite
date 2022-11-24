@@ -17,11 +17,11 @@ std::vector<double> calculatePBSfromAFs(const double p1, const double p2, const 
 double DxyPerSNPfromAFs(double AF1, double AF2);
 double DxyPerSNPfromSetAlleles(const GeneralSetCounts* c, const string& set1, const string& set2); 
 
-template <class T> double calculateFst(const T& fstNumerators, const T& fstDenominators) {
+template <class T> double calculateFst(const T& fstNumerators, const T& fstDenominators, const bool bZeroRounding) {
     double numeratorAverage = vector_average(fstNumerators);
     double denominatorAverage = vector_average(fstDenominators);
     double Fst = numeratorAverage/denominatorAverage;
-    if (Fst < 0) Fst = 0;
+    if (bZeroRounding && Fst < 0) Fst = 0;
     return Fst;
 }
 

@@ -38,12 +38,13 @@ HelpOption RunNameOption MaxMissOption
 //"                                               the output file has the suffix '_fst_above_minFst.txt'\n"
 "       --accessibleGenomeBED=BEDfile.bed       (optional) a bed file specifying the regions of the genome where we could call SNPs\n"
 "                                               this is used when calculating nucleotide diversity (pi) and absolute sequence divergence (d_XY)\n"
+"       -z, --noRoundingToZero                  (optional) Do not round negative Fst values to zero\n"
 "\n\n"
 "\nReport bugs to " PACKAGE_BUGREPORT "\n\n";
 
 enum { OPT_HELP = 1, OPT_ANNOT, OPT_ANC_SETS, OPT_REG_ABOVE, OPT_ACC_GEN_BED  };
 
-static const char* shortopts = "hn:w:f:m:g:";
+static const char* shortopts = "hn:w:f:m:g:z";
 
 static const struct option longopts[] = {
 //    { "ancSets",   required_argument, NULL, OPT_ANC_SETS },
@@ -57,6 +58,7 @@ static const struct option longopts[] = {
     { "maxMissing", required_argument, NULL, 'm' },
     { "genMap",   required_argument, NULL, 'g' },
     { "help",   no_argument, NULL, 'h' },
+    { "noRoundingToZero",   no_argument, NULL, 'z' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -71,7 +73,7 @@ namespace opt
     static int physicalWindowSize = 10000;
     static string runName = "";
     static double maxMissing = 0.2;
-    
+    static bool bZeroRounding = true;
     static bool bMakeRegionsBed = false; static double regAbove = 1;
     //static string ancSets;
 }
@@ -168,12 +170,12 @@ int fstMain(int argc, char** argv) {
                 if (wgAnnotation.currentGene != "") p.addSNPresultsToGene(i, thisSNPFstNumerator,thisSNPFstDenominator, wgAnnotation);
                 
                 if (p.usedVars[i] > opt::windowSize && (p.usedVars[i] % opt::windowStep == 0)) {
-                    p.finalizeAndOutputSNPwindow(i, v.chr, v.posInt, ag, r);
+                    p.finalizeAndOutputSNPwindow(i, v.chr, v.posInt, ag, r, opt::bZeroRounding);
                 }
                 
                 // Check if we are still in the same physical window...
                 if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
-                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd);
+                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd, opt::bZeroRounding);
                 }
                 
                 // Check if we are still in the same gene:
@@ -224,6 +226,7 @@ void parseFstOptions(int argc, char** argv) {
             case 'g': arg >> opt::genMapFile; break;
             case 'm': arg >> opt::maxMissing; break;
             case 'n': arg >> opt::runName; break;
+            case 'z': opt::bZeroRounding = false; break;
             case '?': die = true; break;
             case 'h': std::cout << FST_USAGE_MESSAGE;
                 exit(EXIT_SUCCESS);

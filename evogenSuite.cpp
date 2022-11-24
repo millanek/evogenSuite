@@ -68,8 +68,8 @@
 
 
 static const char *VERSION_MESSAGE =
-"evo software Version " PACKAGE_VERSION "\n"
-"Written by Milan Malinsky.\n"
+PROGRAM_BIN " software Version " PACKAGE_VERSION "\n"
+"Written by " AUTHOR "\n"
 "\n";
 
 static const char *USAGE_MESSAGE =
@@ -118,6 +118,7 @@ int main(int argc, char **argv) {
             std::cerr << "Unrecognized command: " << command << "\n";
             return 1;
         }
+        if (iFstNum == 0) 
         return 0;
     }
 }
