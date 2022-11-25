@@ -88,6 +88,8 @@ public:
             *outFile << "\n";
             
             *outFileFixedWindow << fstOufileHeader;
+            if (bRecombMapPresent) *outFileFixedWindow << "\t" << "mean_r";
+            *outFileFixedWindow << "\n";
             //outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
             outFiles.push_back(outFile); outFilesFixedWindow.push_back(outFileFixedWindow);
       
@@ -197,7 +199,7 @@ public:
     }
     
     
-    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const int currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd, const bool bZeroRounding) {
+    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const int currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd, const RecombinationMap* r, const bool bZeroRounding) {
         
         if (thisWindowStart < currentSNPcoord) { // As long as the current SNP coord is more than the previous (i.e., we are on the same chromosome; I should check this properly
             int accessibleInThisWindow;
@@ -216,10 +218,18 @@ public:
                 thisFixedWindowDxy = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iDxy], accessibleInThisWindow);
                 thisFixedWindowPi1 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi1], accessibleInThisWindow);
                 thisFixedWindowPi2 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi2], accessibleInThisWindow);
-                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << thisFixedWindowFst << "\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow << std::endl;
+                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << thisFixedWindowFst << "\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow;
             } else { // If this physical window did not have any SNPs, then Fst="NA"
-                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\tNA\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow << std::endl;
+                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\tNA\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow;
             }
+            
+            if (r->initialised) {
+                double meanRecomb = r->getMeanRecombinationRate(chr, thisWindowStart, thisWindowEnd);
+                // std::cerr << "meanRecomb: " << meanRecomb << std::endl;
+                *outFilesFixedWindow[pairNumber] << "\t" << meanRecomb;
+            }
+            *outFilesFixedWindow[pairNumber] << std::endl;
+            
             
             for (int i = 0; i < resultsPhysicalWindows[pairNumber].size(); i++) {
                 resultsPhysicalWindows[pairNumber][i].clear();
@@ -235,7 +245,10 @@ public:
                 } else {
                     accessibleInThisWindow = physicalWindowSize;
                 }
-                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << accessibleInThisWindow << std::endl;
+                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << accessibleInThisWindow;
+                if (r->initialised) *outFilesFixedWindow[pairNumber] << "\t" << "NA";
+                *outFilesFixedWindow[pairNumber] << std::endl;
+                
                 thisWindowStart = thisWindowStart + physicalWindowSize;
                 thisWindowEnd = thisWindowEnd + physicalWindowSize;
             }

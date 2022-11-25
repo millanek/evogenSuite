@@ -175,7 +175,7 @@ int fstMain(int argc, char** argv) {
                 
                 // Check if we are still in the same physical window...
                 if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
-                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd, opt::bZeroRounding);
+                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd, r, opt::bZeroRounding);
                 }
                 
                 // Check if we are still in the same gene:
