@@ -212,12 +212,12 @@ void parseFstOptions(int argc, char** argv) {
           //  case OPT_ANC_SETS: arg >> opt::ancSets; break;
             case 'w':
                 windowSizeStep = split(arg.str(), ',');
-                opt::windowSize = atoi(windowSizeStep[0].c_str());
-                opt::windowStep = atoi(windowSizeStep[1].c_str());
                 if (windowSizeStep.size() != 2) {
                     std::cerr << "Error in the -w option: It needs two numbers separated by a comma; e.g. '-w 20,10'\n";
                     die = true;
                 }
+                opt::windowSize = atoi(windowSizeStep[0].c_str());
+                opt::windowStep = atoi(windowSizeStep[1].c_str());
                 break;
             case OPT_REG_ABOVE: opt::bMakeRegionsBed = true; arg >> opt::regAbove; break;
             case OPT_ANNOT: arg >> opt::annotFile; break;
