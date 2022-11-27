@@ -53,7 +53,9 @@ size_t locateOneSample(std::vector<std::string>& sample_names, const std::string
 void SetInformation::linkSetsAndVCFpositions(const std::vector<std::string>& sampleNames) {
     // print_vector_stream(sampleNames, std::cerr);
     for (std::vector<std::string>::size_type i = 0; i != sampleNames.size(); i++) {
-        posToPopMap[i] = IDsToPopMap.at(sampleNames[i]);
+        try { posToPopMap[i] = IDsToPopMap.at(sampleNames[i]); } catch (const std::out_of_range& oor) {
+            std::cerr << "WARNING: The sample " << sampleNames[i] << " is in the VCF but not assigned in the SETS.txt file" << std::endl;
+        }
     }
     // Iterate over all the keys in the map to find the samples in the VCF:
     // Give an error if no sample is found for a species:
