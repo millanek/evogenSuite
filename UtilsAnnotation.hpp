@@ -572,6 +572,7 @@ public:
             }
             
             if (currentFeature[0] != previousScaffold && previousScaffold != "") {
+                //std::cerr << "Loading scaffold: " << previousScaffold << std::endl;
                 if (debug) {
                     std::cerr << "Loading scaffold: " << previousScaffold << std::endl;
                     std::cerr << "Starts: " << std::endl;
@@ -585,9 +586,9 @@ public:
                 BedFeaturesThisScaffold.clear(); featureStarts.clear(); featureEnds.clear();
                 for(int i = 0; i < numValues; i++) {
                     BedFeatureValueMaps[i][previousScaffold] = featureValues[i];
-                    featureValues.clear();
+                    featureValues[i].clear();
                 }
-                // std::cerr << "Loading scaffold: " << currentScaffold << std::endl;
+                //std::cerr << "Loading scaffold: " << currentFeature[0] << std::endl;
             }
             int subtractFromLeft = (leftCoordOneIndexed) ? 1 : 0;
             featureStarts.push_back(atoi(currentFeature[1].c_str()) - subtractFromLeft);

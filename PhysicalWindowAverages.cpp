@@ -92,7 +92,7 @@ int pwMain(int argc, char** argv) {
         int maxCoordToOutput = roundToNearestValue(lastCoord, opt::physicalWindowSize);
         for (int i = 1; i < maxCoordToOutput; i = i + opt::physicalWindowSize) {
             int physicalWindowEnd = i + opt::physicalWindowSize - 1;
-            std::cout << i << "\t" << physicalWindowEnd << "\t";
+            std::cout << chromosome << "\t" << i << "\t" << physicalWindowEnd << "\t";
             for (int j = 0; j < fs.size() - 1; j++) {
                 print_vector(fs[j]->getMeanValuesForRegion(chromosome, i, physicalWindowEnd),std::cout,'\t',false);
                 std::cout << "\t";
