@@ -182,6 +182,8 @@ void parsePBSoptions(int argc, char** argv) {
         die = true;
     }
     
+    validateMissOption(opt::maxMissing);
+    
     if (die) {
         std::cout << "\n" << PBS_USAGE_MESSAGE;
         exit(EXIT_FAILURE);

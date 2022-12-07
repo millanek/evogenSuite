@@ -166,6 +166,10 @@ void parseStatsOptions(int argc, char** argv) {
             case OPT_SHARED_POL: opt::bSharedPolymorph = true; break;
             case OPT_BOOTSTRAP:
                 bootstrapRepsBlocksize = split(arg.str(), ',');
+                if (bootstrapRepsBlocksize.size() != 2) {
+                    std::cerr << "ERROR: The --bootstrap option needs two numbers separated by a comma; e.g. '--bootstrap 100,1000\n";
+                    die = true;
+                }
                 opt::bootstrapBlockSize = atoi(bootstrapRepsBlocksize[0].c_str());
                 opt::bootstrapReps = atoi(bootstrapRepsBlocksize[1].c_str());
                 opt::bDoBootstrap = true;
@@ -187,10 +191,7 @@ void parseStatsOptions(int argc, char** argv) {
         die = true;
     }
     
-    if (bootstrapRepsBlocksize.size() != 2) {
-        std::cerr << "Error in the --bootstrap option: It needs two numbers separated by a comma; e.g. '--bootstrap 100,1000\n";
-        die = true;
-    }
+    validateMissOption(opt::maxMissing);
         
     if (die) {
         std::cout << "\n" << STATS_USAGE_MESSAGE;

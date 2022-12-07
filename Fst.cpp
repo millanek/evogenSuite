@@ -28,7 +28,7 @@ static const char *FST_USAGE_MESSAGE =
 
 "\n"
 HelpOption RunNameOption MaxMissOption
-"       -f, --fixedW size                       (default: 10000) fixed window size\n"
+"       -f, --fixedW SIZE                       (default: 10000) fixed window size\n"
 "       -w SIZE,STEP --window=SIZE,STEP         (default: 20,10) the parameters of the sliding window: contains SIZE SNPs and move by STEP\n"
 //"       --ancSets=ANCESTRAL_SAMPLE_SETS.txt     (optional) two sets of samples that form outgroup populations\n"
 //"                                               for particular Fst levels asks whether the SNPs are segregating in the outgroups\n"
@@ -53,7 +53,6 @@ static const struct option longopts[] = {
     { "annot",   required_argument, NULL, OPT_ANNOT },
     { "accessibleGenomeBED", required_argument, NULL, OPT_ACC_GEN_BED },
     { "fixedW", required_argument, NULL, 'f' },
-    { "samples",   required_argument, NULL, 's' },
     { "run-name",   required_argument, NULL, 'n' },
     { "maxMissing", required_argument, NULL, 'm' },
     { "genMap",   required_argument, NULL, 'g' },
@@ -213,7 +212,7 @@ void parseFstOptions(int argc, char** argv) {
             case 'w':
                 windowSizeStep = split(arg.str(), ',');
                 if (windowSizeStep.size() != 2) {
-                    std::cerr << "Error in the -w option: It needs two numbers separated by a comma; e.g. '-w 20,10'\n";
+                    std::cerr << "ERROR: The -w option requires two numbers separated by a comma; e.g. '-w 20,10'\n";
                     die = true;
                 }
                 opt::windowSize = atoi(windowSizeStep[0].c_str());
@@ -244,17 +243,12 @@ void parseFstOptions(int argc, char** argv) {
         die = true;
     }
     
-    
-    
     if (opt::windowStep > opt::windowSize) {
-        std::cerr << "Error in the -w option: The window step cannot be higher than window size (you can set -w 1,1 for per variant Fst)\n";
+        std::cerr << "ERROR: In the -w option the window step cannot be higher than window size (you can set -w 1,1 for per variant Fst)\n";
         die = true;
     }
     
-    if (opt::maxMissing <= 0 || opt::maxMissing > 1) {
-        std::cerr << "Error in the -m option: The maximum missingness must be in the interval (0,1] \n";
-        die = true;
-    }
+    validateMissOption(opt::maxMissing);
     
     if (opt::regAbove <= 0 ||  opt::regAbove > 1) {
         std::cerr << "Error in the --regions-above option: The value has to be in the interval (0,1) \n";

@@ -8,7 +8,7 @@
 #include "UtilsAnnotation.hpp"
 
 
-std::string getIndividualSequenceForThisRegion(const std::vector<std::string>& thisRegionAnnotation, const std::string& strand, const std::string& currentIndividualWholeScaffoldSequence) {
+string getIndividualSequenceForThisRegion(const vector<string>& thisRegionAnnotation, const string& strand, const string& currentIndividualWholeScaffoldSequence) {
     string geneSeq = "";
     for (std::vector<std::string>::size_type j = 0; j != thisRegionAnnotation.size(); j++) {
         std::vector<string> annotLineVec = split(thisRegionAnnotation[j], '\t');
@@ -21,11 +21,11 @@ std::string getIndividualSequenceForThisRegion(const std::vector<std::string>& t
 }
 
 
-std::string getReferenceForThisRegion(const std::vector<std::string>& thisRegionAnnotation, const std::string& strand, const std::string& currentScaffoldReference) {
+string getReferenceForThisRegion(const vector<string>& thisRegionAnnotation, const string& strand, const string& currentScaffoldReference) {
     // std::cerr << "generating gene refseq" << std::endl;
-    std::string refSeq = "";
-    for (std::vector<std::string>::size_type j = 0; j != thisRegionAnnotation.size(); j++) {
-        std::vector<string> annotLineVec = split(thisRegionAnnotation[j], '\t');
+    string refSeq = "";
+    for (vector<string>::size_type j = 0; j != thisRegionAnnotation.size(); j++) {
+        vector<string> annotLineVec = split(thisRegionAnnotation[j], '\t');
         refSeq = refSeq + currentScaffoldReference.substr(atoi(annotLineVec[1].c_str())-1,atoi(annotLineVec[2].c_str())-atoi(annotLineVec[1].c_str()) + 1);
     }
     if (strand == "-")
@@ -36,11 +36,11 @@ std::string getReferenceForThisRegion(const std::vector<std::string>& thisRegion
 
 
 void Annotation::getSNPgeneDetails(const string& chr, const int SNPlocus) {
-    std::vector<string> scaffoldTranscriptStartEnd = transcriptStartEndMap[chr];
+    vector<string> scaffoldTranscriptStartEnd = transcriptStartEndMap[chr];
     
     string tempCurrentGene = ""; string tempSNPcategory = "nonCoding";
-    for (std::vector<std::vector<string> >::size_type i = 0; i != scaffoldTranscriptStartEnd.size(); i++) {
-        std::vector<string> startEndVec = split(scaffoldTranscriptStartEnd[i], '\t');
+    for (vector< vector<string> >::size_type i = 0; i != scaffoldTranscriptStartEnd.size(); i++) {
+        vector<string> startEndVec = split(scaffoldTranscriptStartEnd[i], '\t');
         string thisTranscript = startEndVec[0];
         int geneStart = atoi(startEndVec[1].c_str()); int geneEnd = atoi(startEndVec[2].c_str()); string strand = startEndVec[3];
         //if (SNPlocus == 20001) { print_vector_stream(startEndVec, std::cerr);}

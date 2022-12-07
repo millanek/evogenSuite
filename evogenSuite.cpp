@@ -13,6 +13,7 @@
 #include "DistanceMatrix.hpp"
 #include "Fst.hpp"
 #include "PBS.hpp"
+#include "PhysicalWindowAverages.hpp"
 
 /*
 #include "process_vcf_stats.h"
@@ -78,10 +79,11 @@ static const char *USAGE_MESSAGE =
 "Contact: " AUTHOR " [" PACKAGE_BUGREPORT "]\n"
 "Usage: " PROGRAM_BIN " <command> [options]\n\n"
 "Commands:\n"
-"           AlleleFreq          Calculate allele frequencies per population\n"
-"           Fst                 Calculating Fst values in windows and per-gene\n"
-"           GlobalPairStats     Calculating global (e.g. genome-wide) statistics from a VCF file. Main output is a distance matrix.\n"
-"           PBS                 Calculating the Population Branch Statistics in windows and per-gene\n"
+"           AlleleFreq              Calculate allele frequencies per population\n"
+"           Fst                     Calculating Fst values in windows and per-gene\n"
+"           GlobalPairStats         Calculating global (e.g. genome-wide) statistics from a VCF file. Main output is a distance matrix.\n"
+"           PBS                     Calculating the Population Branch Statistics in windows and per-gene\n"
+"           PhysicalWindowAverages  Getting (weighted) averages of statistics in fixed physical windows (e.g. 1kb windows)\n"
 "\nReport bugs to " PACKAGE_BUGREPORT "\n\n";
 
 int main(int argc, char **argv) {
@@ -113,6 +115,8 @@ int main(int argc, char **argv) {
             globalStatsMain(argc - 1, argv + 1);
         else if(command == "PBS")
             PBSmain(argc - 1, argv + 1);
+        else if(command == "PhysicalWindowAverages")
+            pwMain(argc - 1, argv + 1);
         else
         {
             std::cerr << "Unrecognized command: " << command << "\n";

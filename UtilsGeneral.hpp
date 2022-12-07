@@ -28,6 +28,8 @@
 #include "gzstream.hpp"
 
 using std::string;
+using std::vector;
+using std::map;
 #define PROGRAM_BIN "evogenSuite"
 #define PACKAGE_BUGREPORT "millanek@gmail.com"
 #define GZIP_EXT ".gz"
@@ -68,6 +70,13 @@ inline void printMissingLikelihoodsWarning(const string& chr, const string& pos)
 inline void notEnoughPopulationsError(const int minPops) {
     std::cerr << "ERROR: You need at least " << minPops << " sets for this analysis." << std::endl;
     exit(EXIT_FAILURE);
+}
+
+inline void validateMissOption(const double maxMissing) {
+    if (maxMissing <= 0 || maxMissing > 1) {
+        std::cerr << "ERROR: The maximum missingness (-m option) must be in the interval (0,1] \n";
+        exit(EXIT_FAILURE);
+    }
 }
 
 // -----------------------------------------------------------------------
