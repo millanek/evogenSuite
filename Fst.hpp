@@ -80,18 +80,20 @@ public:
             std::vector<string> twoPops = split(line, '\t'); assert(twoPops.size() == 2);
             print_vector(twoPops, std::cout);
             std::ofstream* outFile = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_Fst_" + runName + "_" + numToString(windowSize) + "_" + numToString(windowStep) + ".txt");
-            std::ofstream* outFileFixedWindow = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_" +  "_Fst_" + runName + "_FW" + numToString(fixedWindowSize) + ".txt");
-            
             string fstOufileHeader = "chr\twStart\twEnd\tFst\tDxy\t" + twoPops[0] + "_pi\t" + twoPops[1] + "_pi\tAccessible_bp";
             *outFile << fstOufileHeader;
             if (bRecombMapPresent) *outFile << "\t" << "mean_r";
             *outFile << "\n";
-            
-            *outFileFixedWindow << fstOufileHeader;
-            if (bRecombMapPresent) *outFileFixedWindow << "\t" << "mean_r";
-            *outFileFixedWindow << "\n";
             //outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
-            outFiles.push_back(outFile); outFilesFixedWindow.push_back(outFileFixedWindow);
+            outFiles.push_back(outFile);
+            
+            if (fixedWindowSize > 0) {
+                std::ofstream* outFileFixedWindow = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_Fst_" + runName + "_FW" + numToString(fixedWindowSize) + ".txt");
+                *outFileFixedWindow << fstOufileHeader;
+                if (bRecombMapPresent) *outFileFixedWindow << "\t" << "mean_r";
+                *outFileFixedWindow << "\n";
+                outFilesFixedWindow.push_back(outFileFixedWindow);
+            }
       
             if (bAnnotationPresent) {
                 std::ofstream* outFileGenes = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_Fst_" + runName + "_" + numToString(windowSize) + "_" + numToString(windowStep) + ".txt");
@@ -161,6 +163,10 @@ public:
         resultsSNPwindows[pairNumber][3].push_back(thisSNPpi1); resultsSNPwindows[pairNumber][3].pop_front();
         resultsSNPwindows[pairNumber][4].push_back(thisSNPpi2); resultsSNPwindows[pairNumber][4].pop_front();
         resultsSNPwindows[pairNumber][5].push_back((double)SNPcoordinate); resultsSNPwindows[pairNumber][5].pop_front();
+        
+    }
+    
+    void addSNPresultsToPhysicalWindows(const int pairNumber, const double thisSNPFstNumerator, const double thisSNPFstDenominator, const double thisSNPDxy, const double thisSNPpi1, const double thisSNPpi2, const int SNPcoordinate) {
         
         resultsPhysicalWindows[pairNumber][0].push_back(thisSNPFstNumerator);
         resultsPhysicalWindows[pairNumber][1].push_back(thisSNPFstDenominator);

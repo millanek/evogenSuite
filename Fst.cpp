@@ -28,7 +28,7 @@ static const char *FST_USAGE_MESSAGE =
 
 "\n"
 HelpOption RunNameOption MaxMissOption
-"       -f, --fixedW SIZE                       (default: 10000) fixed window size\n"
+"       -f, --fixedW SIZE                       (default: 0) fixed window size - will do a fixed window calculation if SIZE > 0bp\n"
 "       -w SIZE,STEP --window=SIZE,STEP         (default: 20,10) the parameters of the sliding window: contains SIZE SNPs and move by STEP\n"
 //"       --ancSets=ANCESTRAL_SAMPLE_SETS.txt     (optional) two sets of samples that form outgroup populations\n"
 //"                                               for particular Fst levels asks whether the SNPs are segregating in the outgroups\n"
@@ -69,7 +69,7 @@ namespace opt
 
     static string accesibleGenBedFile; static string annotFile; static string genMapFile;
     static int windowSize = 20; static int windowStep = 10;
-    static int physicalWindowSize = 10000;
+    static int physicalWindowSize = 0;
     static string runName = "";
     static double maxMissing = 0.2;
     static bool bZeroRounding = true;
@@ -166,6 +166,8 @@ int fstMain(int argc, char** argv) {
                 
                 p.addSNPresultsToWindows(i,thisSNPFstNumerator,thisSNPFstDenominator, thisSNPDxy, thisSNPpi1,thisSNPpi2,v.posInt);
                 
+                if (opt::physicalWindowSize > 0) p.addSNPresultsToPhysicalWindows(i,thisSNPFstNumerator,thisSNPFstDenominator, thisSNPDxy, thisSNPpi1,thisSNPpi2,v.posInt);
+                
                 if (wgAnnotation.currentGene != "") p.addSNPresultsToGene(i, thisSNPFstNumerator,thisSNPFstDenominator, wgAnnotation);
                 
                 if (p.usedVars[i] > opt::windowSize && (p.usedVars[i] % opt::windowStep == 0)) {
@@ -173,8 +175,10 @@ int fstMain(int argc, char** argv) {
                 }
                 
                 // Check if we are still in the same physical window...
-                if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
-                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd, r, opt::bZeroRounding);
+                if (opt::physicalWindowSize > 0) {
+                    if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
+                        p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd, r, opt::bZeroRounding);
+                    }
                 }
                 
                 // Check if we are still in the same gene:
