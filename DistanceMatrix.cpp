@@ -7,7 +7,7 @@
 
 #include "DistanceMatrix.hpp"
 
-#define SUBPROGRAM "GlobalPairStats"
+#define SUBPROGRAM "GlobalPairs"
 #define MIN_SETS 2
 
 static const char *STATS_USAGE_MESSAGE =
@@ -108,11 +108,12 @@ int globalStatsMain(int argc, char** argv) {
             
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
+            
             c->getSetVariantCounts(genotypes, setInfo.posToPopMap, v);
             //c->calculatePiPerVariantPerSet();
             genotypes.clear(); genotypes.shrink_to_fit();
             
-            d.addAllPairwiseDistances(setInfo, c, opt::maxMissing);
+            d.addAllPairwiseDistances(setInfo, c, opt::maxMissing, opt::bDoBootstrap);
             
             if (opt::bDoBootstrap && totalVariantNumber % opt::bootstrapBlockSize == 0) d.addBootstrapBlock();
             

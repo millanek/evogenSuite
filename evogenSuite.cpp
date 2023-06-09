@@ -81,7 +81,7 @@ static const char *USAGE_MESSAGE =
 "Commands:\n"
 "           AlleleFreq              Calculate allele frequencies per population\n"
 "           Fst                     Calculating Fst values in windows and per-gene\n"
-"           GlobalPairStats         Calculating global (e.g. genome-wide) statistics from a VCF file. Main output is a distance matrix.\n"
+"           GlobalPairs             Calculating global (e.g. genome-wide) statistics from a VCF file. Main output is a distance matrix.\n"
 "           PBS                     Calculating the Population Branch Statistics in windows and per-gene\n"
 "           PhysicalWindowAverages  Getting (weighted) averages of statistics in fixed physical windows (e.g. 1kb windows)\n"
 "\nReport bugs to " PACKAGE_BUGREPORT "\n\n";

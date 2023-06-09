@@ -49,24 +49,28 @@ public:
         }
     };
     
-    void addAllPairwiseDistances(const SetInformation& setInfo, const GeneralSetCounts* c, double maxMissing) {
+    void addAllPairwiseDistances(const SetInformation& setInfo, const GeneralSetCounts* c, const double maxMissing, const bool bDoBootstrap) {
         for (int i = 0; i < setInfo.populations.size(); i++) {
+            // std::cerr << "setInfo.populations[i]: " <<  setInfo.populations[i] << std::endl;
+
             for (int j = 0; j <= i; j++) {
                 string set1 = setInfo.populations[i];
                 string set2 = setInfo.populations[j];
-                
+               // std::cerr << "setInfo.populations[j]: " <<  setInfo.populations[j] << std::endl;
                 int n1 = c->setRefCounts.at(set1) + vector_sum(c->setAltAlleleCounts.at(set1));
                 int n2 = c->setRefCounts.at(set2) + vector_sum(c->setAltAlleleCounts.at(set2));
+               // std::cerr << "n1: " <<  n1 << std::endl;
+               // std::cerr << "n2: " <<  n2 << std::endl;
                 int set1FullSize = 2*(int)setInfo.popToPosMap.at(set1).size();
                 int set2FullSize = 2*(int)setInfo.popToPosMap.at(set2).size();
                 
                 if ( (double)n1/set1FullSize <= (1 - maxMissing) || (double)n2/set2FullSize <= (1 - maxMissing) ) {
                     pairwiseMissingness[i][j]++;
-                    thisBootstrapBlockMissingness[i][j]++;
+                    if (bDoBootstrap) thisBootstrapBlockMissingness[i][j]++;
                 } else {
                     double Dxy = DxyPerSNPfromSetAlleles(c,setInfo.populations[i],setInfo.populations[j]);
                     diffMatrix[i][j] += Dxy;
-                    thisBootstrapBlock[i][j] += Dxy;
+                    if(bDoBootstrap) thisBootstrapBlock[i][j] += Dxy;
                 }
             }
         }

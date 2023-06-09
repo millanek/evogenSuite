@@ -194,7 +194,7 @@ int DistOutMain(int argc, char** argv) {
             // Now calculate Dxy per SNP:
             double AFout;
             for (int i = 0; i != outgroups.size(); i++) {
-                AFout = c->setAAFs.at(outgroups[i]);
+                AFout = c->setAAFs.at(outgroups[i])[0];
                 if (AFout == -1) {
                     missingVars[i]++;
                     // for (int j = 0; j != ingroups.size(); j++) { missingDist[i][j]++; }
@@ -202,9 +202,9 @@ int DistOutMain(int argc, char** argv) {
                 }
                 usedVars[i]++;
                 for (int j = 0; j != ingroups.size(); j++) {
-                    double AFin = c->setAAFs.at(ingroups[j]);
+                    double AFin = c->setAAFs.at(ingroups[j])[0];
                     if (AFin != -1) {
-                        double thisSNPdxy = DxyPerSNPfromAFs(AFout, c->setAAFs.at(ingroups[j]));
+                        double thisSNPdxy = DxyPerSNPfromAFs(AFout, AFin);
                         DxyFixedWindowPerSNP[i][j].push_back(thisSNPdxy);
                     } else {
                         missingDist[i][j]++;
