@@ -22,19 +22,6 @@ bool bPairInformativeThisSNP(const double p1, const double p2, const int n1, con
                              const int set1FullSize, const int set2FullSize, const double maxMissing);
 
 
-inline double calculateFstNumerator(const double p1, const double p2, const int n1, const int n2) {
-    double power = pow((p1-p2), 2);
-    double fraction1 = (p1*(1-p1))/(n1-1);
-    double fraction2 = (p2*(1-p2))/(n2-1);
-    double numerator = power - fraction1 - fraction2;
-    return numerator;
-}
-
-inline double calculateFstDenominator(const double p1, const double p2) {
-    double denominator = (p1*(1-p2))+(p2*(1-p1));
-    return denominator;
-}
-
 
 inline double calculateExpectedHeterozygositySimple(const double p) {
     double q = 1 - p;
@@ -80,10 +67,15 @@ public:
             std::vector<string> twoPops = split(line, '\t'); assert(twoPops.size() == 2);
             print_vector(twoPops, std::cout);
             std::ofstream* outFile = new std::ofstream(twoPops[0] + "_" + twoPops[1] + "_Fst_" + runName + "_" + numToString(windowSize) + "_" + numToString(windowStep) + ".txt");
-            string fstOufileHeader = "chr\twStart\twEnd\tFst\tDxy\t" + twoPops[0] + "_pi\t" + twoPops[1] + "_pi\tAccessible_bp";
+            string fstOufileHeader;
+            if (windowSize == 1 && windowStep == 1) {
+                fstOufileHeader = "chr\tPos\tFst";
+            } else {
+                fstOufileHeader = "chr\twStart\twEnd\tFst\tDxy\t" + twoPops[0] + "_pi\t" + twoPops[1] + "_pi\tAccessible_bp";
+            }
             *outFile << fstOufileHeader;
             if (bRecombMapPresent) *outFile << "\t" << "mean_r";
-            *outFile << "\n";
+            *outFile << std::endl;
             //outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
             outFiles.push_back(outFile);
             
@@ -201,6 +193,9 @@ public:
             }
             
             *outFiles[pairNumber] << std::endl;
+        } else if (startCoord == currentSNPcoordinate) {
+            double Fst = calculateFst(resultsSNPwindows[pairNumber][iFstNum], resultsSNPwindows[pairNumber][iFstDenom], bZeroRounding);
+            *outFiles[pairNumber] << chr << "\t" << (int)startCoord << "\t" << Fst << std::endl;
         }
     }
     

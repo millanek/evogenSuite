@@ -13,7 +13,7 @@
 // ---------------- Functions and a class for dealing with SETS/POPULATIONS files
 
 // a) Find which fields in the VCF file corresponds to samples listed in a given set
-std::vector<size_t> locateSet(const std::vector<std::string>& sample_names, const std::vector<std::string>& set);
+std::vector<size_t> locateSet(const std::vector<std::string>& sample_names, const std::vector<std::string>& set, bool printWarnings = true);
 // b) locating one sample
 size_t locateOneSample(std::vector<std::string>& sample_names, const std::string toFind);
 
@@ -51,7 +51,7 @@ public:
     std::map<string, std::vector<size_t>> popToPosMap;
     std::map<size_t, string> posToPopMap;
 
-    void linkSetsAndVCFpositions(const std::vector<std::string>& sampleNames);
+    void linkSetsAndVCFpositions(const std::vector<std::string>& sampleNames, bool printWarnings = true);
 
 };
 

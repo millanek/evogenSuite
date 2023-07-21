@@ -10,12 +10,12 @@
 
 // ---------------- Functions for dealing with SETS/POPULATIONS files
 
-std::vector<size_t> locateSet(const std::vector<std::string>& sample_names, const std::vector<std::string>& set) {
+std::vector<size_t> locateSet(const std::vector<std::string>& sample_names, const std::vector<std::string>& set, bool printWarnings) {
     std::vector<size_t> setLocs;
     for (std::vector<std::string>::size_type i = 0; i != set.size(); i++) {
         std::vector<std::string>::const_iterator it = std::find(sample_names.begin(), sample_names.end(), set[i]);
-        if (it == sample_names.end()) {
-            std::cerr << "Did not find the sample: \"" << set[i] << "\"" << std::endl;
+        if (it == sample_names.end() && printWarnings) {
+            std::cerr << "WARNING: Did not find the sample: \"" << set[i] << "\"" << std::endl;
             print_vector(sample_names, std::cerr,',');
         } else {
             size_t loc = std::distance(sample_names.begin(), it);
@@ -50,11 +50,11 @@ size_t locateOneSample(std::vector<std::string>& sample_names, const std::string
     return pos;
 }
 
-void SetInformation::linkSetsAndVCFpositions(const std::vector<std::string>& sampleNames) {
+void SetInformation::linkSetsAndVCFpositions(const std::vector<std::string>& sampleNames, bool printWarnings) {
     // print_vector_stream(sampleNames, std::cerr);
     for (std::vector<std::string>::size_type i = 0; i != sampleNames.size(); i++) {
         try { posToPopMap[i] = IDsToPopMap.at(sampleNames[i]); } catch (const std::out_of_range& oor) {
-            std::cerr << "WARNING: The sample " << sampleNames[i] << " is in the VCF but not assigned in the SETS.txt file" << std::endl;
+            if (printWarnings) std::cerr << "WARNING: The sample " << sampleNames[i] << " is in the VCF but not assigned in the SETS.txt file" << std::endl;
         }
     }
     // Iterate over all the keys in the map to find the samples in the VCF:
@@ -63,10 +63,9 @@ void SetInformation::linkSetsAndVCFpositions(const std::vector<std::string>& sam
         string sp =  it->first;
         //std::cerr << "sp " << sp << std::endl;
         std::vector<string> IDs = it->second;
-        std::vector<size_t> spPos = locateSet(sampleNames, IDs);
-        if (spPos.empty()) {
-            std::cerr << "Did not find any samples in the VCF for \"" << sp << "\"" << std::endl;
-            assert(!spPos.empty());
+        std::vector<size_t> spPos = locateSet(sampleNames, IDs,printWarnings);
+        if (spPos.empty() && printWarnings) {
+            std::cerr << "WARNING: Did not find any samples in the VCF for \"" << sp << "\"" << std::endl;
         }
         popToPosMap[sp] = spPos;
     }

@@ -9,6 +9,7 @@
 #define UtilsSetCounts_hpp
 
 #include "UtilsGeneral.hpp"
+#include "UtilsSetInfo.hpp"
 
 class VariantInfo {
 public:
@@ -70,6 +71,9 @@ public:
     std::map<string,int> setRefCounts;
     std::map<string,std::vector<int>> setAltAlleleCounts;
     
+    // Num
+    std::map<string, double> setFirstAlleleMissingness;
+    
     // Alternate allele frequencies in each set (for each alternative allele)
     std::map<string,std::vector<double>> setAAFs;
     
@@ -101,6 +105,15 @@ public:
             overallCount += it->second;
         }
         return overallCount;
+    }
+    
+    void fillMissingFistAlleleInfo(const SetInformation& setInfo) {
+        for(std::map<string, std::vector<size_t>>::const_iterator it = setInfo.popToPosMap.begin(); it != setInfo.popToPosMap.end(); ++it) {
+            int setFullSize = ploidy*(int)it->second.size();
+            int nFirstAllele = setRefCounts.at(it->first) + setAltAlleleCounts.at(it->first)[0];
+            
+            setFirstAlleleMissingness[it->first] = 1 - ((double)nFirstAllele/setFullSize);
+        }
     }
     
 private:
