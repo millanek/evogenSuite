@@ -48,18 +48,18 @@ class GeneralSetCounts {
 public:
     GeneralSetCounts(const std::map<string, std::vector<size_t>>& setsToPosMap, const int nSamples) {
         
-        for(std::map<string, std::vector<size_t>>::const_iterator it = setsToPosMap.begin(); it != setsToPosMap.end(); ++it) {
-            setRefCounts[it->first] = 0;
-            setAlleles[it->first]; // Default construct an empty vector there
-            setAltAlleleCounts[it->first]; // Default construct an empty vector there
-            setAAFs[it->first]; // Default construct an empty vector there
-            setHetCounts[it->first] = 0;
-            setSNPPairCounts[it->first] = 0;
+        for (const auto& [setName, positions] : setsToPosMap) {
+            setRefCounts[setName] = 0;
+            setAlleles[setName]; // Default construct an empty vector there
+            setAltAlleleCounts[setName]; // Default construct an empty vector there
+            setAAFs[setName]; // Default construct an empty vector there
+            setHetCounts[setName] = 0;
+            setSNPPairCounts[setName] = 0;
             
-            piPerVariantPerSet[it->first];
-            hetPerVariantPerSet[it->first];
+            piPerVariantPerSet[setName];
+            hetPerVariantPerSet[setName];
             
-            //  setDAFs[it->first] = -1.0;
+            //  setDAFs[setName] = -1.0;
         }
     };
     
@@ -93,26 +93,26 @@ public:
     
     int getOverallCountOfFirstAltAllele() const {
         int overallCount = 0;
-        for (std::map<string,std::vector<int>>::const_iterator it = setAltAlleleCounts.begin(); it != setAltAlleleCounts.end(); it++) {
-            overallCount += it->second[0];
+        for (const auto& [setName, altAlleleCounts] : setAltAlleleCounts) {
+            overallCount += altAlleleCounts[0];
         }
         return overallCount;
     }
     
     int getOverallCountOfRefAllele() const {
         int overallCount = 0;
-        for (std::map<string,int>::const_iterator it = setRefCounts.begin(); it != setRefCounts.end(); it++) {
-            overallCount += it->second;
+        for (const auto& [setName, refAlleleCount] : setRefCounts) {
+            overallCount += refAlleleCount;
         }
         return overallCount;
     }
     
     void fillMissingFistAlleleInfo(const SetInformation& setInfo) {
-        for(std::map<string, std::vector<size_t>>::const_iterator it = setInfo.popToPosMap.begin(); it != setInfo.popToPosMap.end(); ++it) {
-            int setFullSize = ploidy*(int)it->second.size();
-            int nFirstAllele = setRefCounts.at(it->first) + setAltAlleleCounts.at(it->first)[0];
+        for (const auto& [setName, positions] : setInfo.popToPosMap) {
+            int setFullSize = ploidy*(int)positions.size();
+            int nFirstAllele = setRefCounts.at(setName) + setAltAlleleCounts.at(setName)[0];
             
-            setFirstAlleleMissingness[it->first] = 1 - ((double)nFirstAllele/setFullSize);
+            setFirstAlleleMissingness[setName] = 1 - ((double)nFirstAllele/setFullSize);
         }
     }
     
@@ -131,11 +131,11 @@ protected:
 class GeneralSetCountsWithLikelihoods : public GeneralSetCounts {
 public:
     GeneralSetCountsWithLikelihoods(const std::map<string, std::vector<size_t>>& setsToPosMap, const int nSamples) : GeneralSetCounts(setsToPosMap,nSamples), likelihoodsProbabilitiesType(LikelihoodsProbabilitiesAbsent) {
-        for(std::map<string, std::vector<size_t>>::const_iterator it = setsToPosMap.begin(); it != setsToPosMap.end(); ++it) {
-            setHWEpriorsFromAAFfromGT[it->first].assign(3, -1.0);
-            setHWEpriorsFromDAFfromGT[it->first].assign(3, -1.0);
-            setAAFsFromLikelihoods[it->first] = -1.0; setDAFsFromLikelihoods[it->first] = -1.0;
-            setAlleleProbCounts[it->first] = 0;
+        for (const auto& [setName, positions] : setsToPosMap) {
+            setHWEpriorsFromAAFfromGT[setName].assign(3, -1.0);
+            setHWEpriorsFromDAFfromGT[setName].assign(3, -1.0);
+            setAAFsFromLikelihoods[setName] = -1.0; setDAFsFromLikelihoods[setName] = -1.0;
+            setAlleleProbCounts[setName] = 0;
         }
     };
     
@@ -158,8 +158,8 @@ public:
 class GeneralSetCountsWithComplements : public GeneralSetCounts {
     public:
     GeneralSetCountsWithComplements(const std::map<string, std::vector<size_t>>& setsToPosMap, const int nSamples, const string thisSNPchr, const string coord) : GeneralSetCounts(setsToPosMap,nSamples) {
-        for(std::map<string, std::vector<size_t>>::const_iterator it = setsToPosMap.begin(); it != setsToPosMap.end(); ++it) {
-            setAAFsComplement[it->first] = -1.0; setDAFsComplement[it->first] = -1.0; setAlleleCountsComplement[it->first] = 0;
+        for (const auto& [setName, positions] : setsToPosMap) {
+            setAAFsComplement[setName] = -1.0; setDAFsComplement[setName] = -1.0; setAlleleCountsComplement[setName] = 0;
         }
     }
     std::map<string,double> setAAFsComplement; // Allele frequencies - alternative allele, in the complement of the set

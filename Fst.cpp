@@ -98,7 +98,7 @@ int fstMain(int argc, char** argv) {
     // Open connection to read from the vcf file
     std::istream* vcfFile = createReader(opt::vcfFile.c_str());
     string line; std::vector<string> fields;
-    int currentWindowStart = 0; int currentWindowEnd = currentWindowStart + opt::physicalWindowSize;
+    int currentWindowStart; int currentWindowEnd;
     string chr; string coord;
     int totalVariantNumber = 0; int reportProgressEvery = 10000; std::clock_t startTime = std::clock();
     while (getline(*vcfFile, line)) {
@@ -112,26 +112,31 @@ int fstMain(int argc, char** argv) {
         } else {
             totalVariantNumber++;
             if (totalVariantNumber % reportProgressEvery == 0) reportProgessVCF(totalVariantNumber, startTime);
-            
            // std::cerr << "Variant N:" << totalVariantNumber << std::endl;
             
             fields = split(line, '\t');
-            
-            VariantInfo v(fields); if (v.onlyIndel) continue; // Only consider SNPs
-            
+            VariantInfo v(fields); 
+            if (v.onlyIndel) continue; // Only consider SNPs
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
+            if(opt::physicalWindowSize > 0 && totalVariantNumber == 1) p.forwardToFirstPhysicalWindow(currentWindowStart,currentWindowEnd,v.chr, v.posInt, ag, r, opt::physicalWindowSize);
             
-         //  if (totalVariantNumber == 6015) std::cerr <<  line << std::endl;
-            
-            GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
+            if (opt::physicalWindowSize > 0 && (v.posInt > currentWindowEnd || v.posInt < currentWindowStart)) {
+                for (int i = 0; i != p.getPairs().size(); i++) {
+                    p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd, r, opt::bZeroRounding);
+                }
+                p.forwardToNextPhysicalWindow(currentWindowStart,currentWindowEnd,v.chr, v.posInt, ag, r, opt::physicalWindowSize);
+            }
+
+            std::unique_ptr<GeneralSetCounts> c = std::make_unique<GeneralSetCounts>(setInfo.popToPosMap, (int)genotypes.size());
             //std::cerr << "Counts created: " << std::endl;
             c->getSetVariantCounts(genotypes, setInfo.posToPopMap, v);
             //std::cerr << "Summarised all counts: " << std::endl;
             c->calculatePiPerVariantPerSet();
             //if (totalVariantNumber >= 43) std::cerr << "Got pi for all populations: " << std::endl;
-            genotypes.clear(); genotypes.shrink_to_fit();
+            genotypes.clear();
             
             for (int i = 0; i != p.getPairs().size(); i++) {
+                
                 string set1 = p.getPairs()[i][0]; string set2 = p.getPairs()[i][1];
                 
                 double p1 = c->setAAFs.at(set1)[0]; double p2 = c->setAAFs.at(set2)[0];
@@ -143,42 +148,25 @@ int fstMain(int argc, char** argv) {
                 if (bPairInformativeThisSNP(p1,p2,n1,n2,set1FullSize,set2FullSize, opt::maxMissing)) p.usedVars[i]++;
                 else continue;
                 
-           /*     if (totalVariantNumber == 6015) {
-                    std::cerr << "p1: " << p1 << std::endl;
-                    std::cerr << "p2: " << p2 << std::endl;
-                    std::cerr << "n1: " << n1 << std::endl;
-                    std::cerr << "n2: " << n2 << std::endl;
-                    std::cerr << "totalVariantNumber: " << totalVariantNumber << std::endl;
-                } */
-                
                 double thisSNPFstNumerator = calculateFstNumerator(p1, p2, n1, n2);
                 double thisSNPFstDenominator = calculateFstDenominator(p1, p2);
-                double thisSNPDxy = DxyPerSNPfromSetAlleles(c, set1, set2);
+                double thisSNPDxy = DxyPerSNPfromSetAlleles(c.get(), set1, set2);
                 double thisSNPpi1 = c->piPerVariantPerSet.at(set1);
                 double thisSNPpi2 = c->piPerVariantPerSet.at(set2);
                 
                 
-                /*  if (isnan(thisSNPFstNumerator) || isnan(thisSNPFstDenominator)) {
-                     std::cerr << "thisSNPFstNumerator: " << thisSNPFstNumerator << std::endl;
-                     std::cerr << "thisSNPFstDenominator: " << thisSNPFstDenominator << std::endl;
-                     std::cerr << "totalVariantNumber: " << totalVariantNumber << std::endl;
-                 } */
-                
                 p.addSNPresultsToWindows(i,thisSNPFstNumerator,thisSNPFstDenominator, thisSNPDxy, thisSNPpi1,thisSNPpi2,v.posInt);
                 
+                if(288000 == currentWindowStart || 291598 == v.posInt) {
+                    std::cerr << "Current window: " << currentWindowStart << ":" << currentWindowEnd << std::endl;
+                    std::cerr << "Current SNP: " << v.chr << ":" << v.posInt << std::endl;
+                }
                 if (opt::physicalWindowSize > 0) p.addSNPresultsToPhysicalWindows(i,thisSNPFstNumerator,thisSNPFstDenominator, thisSNPDxy, thisSNPpi1,thisSNPpi2,v.posInt);
                 
                 if (wgAnnotation.currentGene != "") p.addSNPresultsToGene(i, thisSNPFstNumerator,thisSNPFstDenominator, wgAnnotation);
                 
                 if (p.usedVars[i] > opt::windowSize && (p.usedVars[i] % opt::windowStep == 0)) {
                     p.finalizeAndOutputSNPwindow(i, v.chr, v.posInt, ag, r, opt::bZeroRounding);
-                }
-                
-                // Check if we are still in the same physical window...
-                if (opt::physicalWindowSize > 0) {
-                    if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
-                        p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd, r, opt::bZeroRounding);
-                    }
                 }
                 
                 // Check if we are still in the same gene:
@@ -188,13 +176,9 @@ int fstMain(int argc, char** argv) {
                 }
                 
             }
-            
-            delete c;
+                   
         }
     }
-    
-    /*double Fst = calculateFst(fstNumerators, fstDenominators);
-    std::cerr << "Fst: " << Fst << std::endl; */
     
     clock_t end = clock();
     double elapsed_secs = double(end - startTime) / CLOCKS_PER_SEC;

@@ -143,7 +143,6 @@ public:
         
         for (int j = 0; j < NumFstGeneResultVectors; j++) {
             resultsGenes.at(trioNumber)[j].clear();
-            resultsGenes.at(trioNumber)[j].shrink_to_fit();
         }
     }
     
@@ -200,16 +199,14 @@ public:
     }
     
     
-    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string chr, const int currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd, const RecombinationMap* r, const bool bZeroRounding) {
+    // This function finalizes the physical window and outputs the results
+    // It also clears the results for this physical window
+    // It is called when the current SNP coordinate is outside the physical window
+    void finalizeAndOutputPhysicalWindow(const int pairNumber, const int physicalWindowSize, const string currentSNPchr, const int currentSNPcoord, const AccessibleGenome* ag, int& thisWindowStart, int& thisWindowEnd, const RecombinationMap* r, const bool bZeroRounding) {
         
-        if (thisWindowStart < currentSNPcoord) { // As long as the current SNP coord is more than the previous (i.e., we are on the same chromosome; I should check this properly
-            int accessibleInThisWindow;
-            if (ag->initialised) {
-                accessibleInThisWindow = ag->getAccessibleBPinRegion(chr, thisWindowStart, thisWindowEnd);
-            } else {
-                accessibleInThisWindow = physicalWindowSize;
-            }
-            
+            int accessibleInThisWindow = ag->initialised 
+                ? ag->getAccessibleBPinRegion(currentSNPchr, thisWindowStart, thisWindowEnd) 
+                : physicalWindowSize;
             
             double thisFixedWindowFst = 0; double thisFixedWindowDxy = 0;
             double thisFixedWindowPi1 = 0; double thisFixedWindowPi2 = 0;
@@ -219,43 +216,75 @@ public:
                 thisFixedWindowDxy = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iDxy], accessibleInThisWindow);
                 thisFixedWindowPi1 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi1], accessibleInThisWindow);
                 thisFixedWindowPi2 = vector_average_withRegion(resultsPhysicalWindows[pairNumber][iPi2], accessibleInThisWindow);
-                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << thisFixedWindowFst << "\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow;
+                *outFilesFixedWindow[pairNumber] << currentSNPchr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << thisFixedWindowFst << "\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow;
             } else { // If this physical window did not have any SNPs, then Fst="NA"
-                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\tNA\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow;
+                *outFilesFixedWindow[pairNumber] << currentSNPchr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\tNA\t" << thisFixedWindowDxy << "\t" << thisFixedWindowPi1 << "\t" << thisFixedWindowPi2 << "\t" << accessibleInThisWindow;
             }
+            if(288000 == thisWindowStart) {
+                std::cerr << "nFwSNPs: " << nFwSNPs << std::endl;
+                std::cerr << "This window: " << thisWindowStart << ":" << thisWindowEnd << std::endl;
+            }
+            //std::cout << "This SNP: " << currentSNPchr << ":" << currentSNPcoord << std::endl;
+            // std::cout << "This window: " << thisWindowStart << ":" << thisWindowEnd << std::endl;
             
             if (r->initialised) {
-                double meanRecomb = r->getMeanRecombinationRate(chr, thisWindowStart, thisWindowEnd);
+                double meanRecomb = r->getMeanRecombinationRate(currentSNPchr, thisWindowStart, thisWindowEnd);
                 // std::cerr << "meanRecomb: " << meanRecomb << std::endl;
                 *outFilesFixedWindow[pairNumber] << "\t" << meanRecomb;
             }
             *outFilesFixedWindow[pairNumber] << std::endl;
             
-            
-            for (int i = 0; i < resultsPhysicalWindows[pairNumber].size(); i++) {
-                resultsPhysicalWindows[pairNumber][i].clear();
-                resultsPhysicalWindows[pairNumber][i].shrink_to_fit();
+            // Clear the results for this physical window
+            for (auto& windowVals : resultsPhysicalWindows[pairNumber]) {
+                windowVals.clear();
             }
             
-            thisWindowStart = thisWindowStart + physicalWindowSize;
-            thisWindowEnd = thisWindowEnd + physicalWindowSize;
-            
-            while (!(thisWindowStart <= currentSNPcoord && thisWindowEnd > currentSNPcoord)) {
-                if (ag->initialised) {
-                    accessibleInThisWindow = ag->getAccessibleBPinRegion(chr, thisWindowStart, thisWindowEnd);
-                } else {
-                    accessibleInThisWindow = physicalWindowSize;
-                }
-                *outFilesFixedWindow[pairNumber] << chr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << accessibleInThisWindow;
-                if (r->initialised) *outFilesFixedWindow[pairNumber] << "\t" << "NA";
-                *outFilesFixedWindow[pairNumber] << std::endl;
-                
-                thisWindowStart = thisWindowStart + physicalWindowSize;
-                thisWindowEnd = thisWindowEnd + physicalWindowSize;
-            }
+    }
+
+    // This function is called when the current SNP coordinate is outside the physical window
+    void forwardToNextPhysicalWindow(int& thisWindowStart, int& thisWindowEnd, const string& currentSNPchr, 
+        const int currentSNPcoord, const AccessibleGenome* ag, const RecombinationMap* r, const int physicalWindowSize) {
+
+        if (thisWindowStart < currentSNPcoord) { // As long as the current SNP coord is more than the previous (i.e., we are on the same chromosome; I should check this properly
+            do {
+                thisWindowStart += physicalWindowSize;
+                thisWindowEnd += physicalWindowSize;
+
+                if (thisWindowEnd < currentSNPcoord) {
+                    int accessibleInThisWindow = ag->initialised 
+                    ? ag->getAccessibleBPinRegion(currentSNPchr, thisWindowStart, thisWindowEnd) 
+                    : physicalWindowSize;
+
+                    for (auto& outFile : outFilesFixedWindow) {
+                        *outFile << currentSNPchr << "\t" << thisWindowStart << "\t" << thisWindowEnd << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << accessibleInThisWindow;
+                        if (r->initialised) *outFile << "\t" << "NA";
+                        *outFile << std::endl;
+                    }
+                } 
+            } while (thisWindowEnd < currentSNPcoord);
         } else {
-            thisWindowStart = 0;
-            thisWindowEnd = 0 + physicalWindowSize;
+            forwardToFirstPhysicalWindow(thisWindowStart, thisWindowEnd, currentSNPchr, currentSNPcoord, ag, r, physicalWindowSize);
+        }
+    }
+
+    void forwardToFirstPhysicalWindow(int& thisWindowStart, int& thisWindowEnd, const string& currentSNPchr, 
+        const int currentSNPcoord, const AccessibleGenome* ag, const RecombinationMap* r, const int physicalWindowSize) {
+        thisWindowStart = 0;
+        thisWindowEnd = 0 + physicalWindowSize;
+        while(thisWindowEnd < currentSNPcoord) {
+            int accessibleInThisWindow = ag->initialised 
+                ? ag->getAccessibleBPinRegion(currentSNPchr, thisWindowStart, thisWindowEnd) 
+                : physicalWindowSize;
+
+            for (auto& outFile : outFilesFixedWindow) {
+                *outFile << currentSNPchr << "\t" << thisWindowStart << "\t" << thisWindowEnd
+                    << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" << "\t" << "NA" 
+                    << "\t" << accessibleInThisWindow;
+                if (r->initialised) *outFile << "\t" << "NA";
+                *outFile << std::endl;
+            }
+            thisWindowStart += physicalWindowSize;
+            thisWindowEnd += physicalWindowSize;
         }
     }
     

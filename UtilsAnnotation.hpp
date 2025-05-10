@@ -430,9 +430,10 @@ public:
                 std::vector<double> thisValuesThisScaffold = BedFeatureValueMaps[i].at(scaffold);
                 valuesThisScaffold.push_back(thisValuesThisScaffold);
             }
+           // if (start > 116000) { exit (1); }
                                                                          
-          //  std::cerr << "There are " << valuesThisScaffold.size() << " values" << std::endl;
-            //std::cerr << "Starts: " << std::endl;
+          
+           // std::cerr << "Start: " << start << "; End: " << end << std::endl;
             //print_vector(featuresThisSc[0], std::cerr);
             //std::cerr << "Ends: " << std::endl;
             
@@ -456,28 +457,34 @@ public:
                         valuesThisFeature[i] = valuesThisScaffold[i][index];
                     }
                   //  std::cerr << "valuesThisFeature[0]\t" << valuesThisFeature[0] << std::endl;
-                    if (featuresThisSc[0][index] < start && featuresThisSc[1][index] <= end)
+                    if (featuresThisSc[0][index] < start && featuresThisSc[1][index] <= end) {
                         numBPthisFeature = (featuresThisSc[1][index] - start) + 1;
-                    else if (featuresThisSc[0][index] >= start && featuresThisSc[1][index] <= end)
+                      //  std::cerr << featuresThisSc[1][index] << " - " << start << " + 1" << std::endl;
+                    } else if (featuresThisSc[0][index] >= start && featuresThisSc[1][index] <= end) {
                         numBPthisFeature = (featuresThisSc[1][index] - featuresThisSc[0][index]);
-                    else if (featuresThisSc[0][index] >= start && featuresThisSc[1][index] > end)
+                      //  std::cerr << featuresThisSc[1][index] << " - " << featuresThisSc[0][index] << std::endl;
+                    } else if (featuresThisSc[0][index] >= start && featuresThisSc[1][index] > end) {
                         numBPthisFeature = (end - featuresThisSc[0][index]);
-                    else if (featuresThisSc[0][index] < start && featuresThisSc[1][index] > end)
+                      //  std::cerr << end << " - " << featuresThisSc[0][index] << std::endl;
+                    } else if (featuresThisSc[0][index] < start && featuresThisSc[1][index] > end) {
                         numBPthisFeature = (end - start) + 1;
+                      //  std::cerr << end << " - " << start << " + 1" << std::endl;
+                    }
                     
-                    //std::cerr << "numBPthisFeature: " << numBPthisFeature << std::endl;
-                  //  std::cerr << "valueThisFeature: " << valueThisFeature << std::endl;
+                   // std::cerr << "numBPthisFeature: " << numBPthisFeature << std::endl;
+                   // std::cerr << "valuesThisFeature[0]: " << valuesThisFeature[0] << std::endl;
                     index++;
                     for(int i = 0; i < BedFeatureValueMaps.size(); i++) {
                         sumPerBPvalues[i] += (valuesThisFeature[i] * numBPthisFeature);
                     }
-                   // std::cerr << "sumPerBPvalues[0]: " << sumPerBPvalues[0] << std::endl;
                     numBPtotal += numBPthisFeature;
                 }
+                // std::cerr << "sumPerBPvalues[0]: " << sumPerBPvalues[0] << std::endl;
+                // std::cerr << "numBPtotal: " << numBPtotal << std::endl;
                 for(int i = 0; i < BedFeatureValueMaps.size(); i++) {
                     meanValues[i] = (double)sumPerBPvalues[i]/numBPtotal;
                 }
-                //std::cerr << "meanValue: " << meanValue << std::endl;
+                // std::cerr << "meanValue: " << meanValues[0] << std::endl;
             }
             return meanValues;
         } catch (const std::out_of_range& oor) {
@@ -551,7 +558,6 @@ public:
         string line;
         string previousScaffold = "";
         
-        
         for(int i = 0; i < numValues; i++) {
             std::map<std::string, std::vector<double> > BedFeatureValueMapInit;
             BedFeatureValueMaps.push_back(BedFeatureValueMapInit);
@@ -559,7 +565,6 @@ public:
             featureValues.push_back(featureValuesInit);
         }
         
-        //std::cerr << "Loading scaffold: " << currentScaffold << std::endl;
         while (getline(*bedFile, line)) {
             std::vector<string> currentFeature = split(line, '\t');
             
@@ -596,13 +601,12 @@ public:
             for(int i = 0; i < numValues; i++) { featureValues[i].push_back(stringToDouble(currentFeature[3+i])); }
             //std::cerr << "Loading scaffold: " << currentFeature[0] << std::endl;
             previousScaffold = currentFeature[0];
-            //std::cerr << "Loading scaffold: " << currentFeature[0] << "\t" << currentScaffold << std::endl;
         }
         // Final line / final scaffold
         BedFeaturesThisScaffold.push_back(featureStarts);
         BedFeaturesThisScaffold.push_back(featureEnds);
         BedFeatureMap[previousScaffold] = BedFeaturesThisScaffold;
-        std::cerr << "Loading scaffold: " << previousScaffold << std::endl;
+        // std::cerr << "Loading scaffold: " << previousScaffold << std::endl;
         for(int i = 0; i < numValues; i++) { BedFeatureValueMaps[i][previousScaffold] = featureValues[i]; }
     }
     
@@ -617,8 +621,9 @@ public:
     AccessibleGenome(const string& bedFileName) {
         if (!bedFileName.empty()) {
             std::ifstream* accessibleGenomeBedFile = new std::ifstream(bedFileName);
+            assertFileOpen(*accessibleGenomeBedFile, bedFileName);
             std::cerr << std::endl;
-            std::cerr << "Loading the accessible genome annotation" << std::endl;
+            std::cerr << "Loading the accessible genome annotation from the file: " << bedFileName << std::endl;
             loadBedFeatureMap(accessibleGenomeBedFile, false, false, false);
             std::cerr << "Done" << std::endl;
             initialised = true;
@@ -674,13 +679,13 @@ class IntervalFile : public BedCoordinateFeatures {
 public:
     IntervalFile() {};
     
-    IntervalFile(const string& bedFileName) {
+    IntervalFile(const string& bedFileName, const bool oneIndexed = false) {
         if (!bedFileName.empty()) {
             std::ifstream* IntervalFileHandle = new std::ifstream(bedFileName);
             std::cerr << std::endl;
             std::cerr << "Loading the input file: " << bedFileName << std::endl;
-            const int numValues = 1; const bool leftCoordOneIndexed = true;
-            loadBedFeatureMap(IntervalFileHandle, numValues, leftCoordOneIndexed, false);
+            const int numValues = 1;
+            loadBedFeatureMap(IntervalFileHandle, numValues, oneIndexed, false);
             std::cerr << "Done" << std::endl;
             initialised = true;
         }

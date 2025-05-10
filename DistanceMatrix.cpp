@@ -7,13 +7,13 @@
 
 #include "DistanceMatrix.hpp"
 
-#define SUBPROGRAM "GlobalPairs"
+#define SUBPROGRAM "GWstats"
 #define MIN_SETS 2
 
 static const char *STATS_USAGE_MESSAGE =
 "Usage: " PROGRAM_BIN " " SUBPROGRAM " [OPTIONS] VCF_FILE POPULATIONS.txt\n"
-"Calculating various global (e.g. genome-wide) statistics from a VCF file\n"
-"By default calculates a distance matrix that can be used e.g. for a Neighbour-Joining tree\n"
+"Calculating genome-wide statistics from a VCF file\n"
+"By default calculates a distance matrix that can be used e.g. for a Neighbour-Joining tree.\n"
 "\n"
 HelpOption RunNameOption MaxMissOption
 "\n"

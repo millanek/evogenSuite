@@ -93,11 +93,22 @@ int pwMain(int argc, char** argv) {
         for (int i = 1; i < maxCoordToOutput; i = i + opt::physicalWindowSize) {
             int physicalWindowEnd = i + opt::physicalWindowSize - 1;
             std::cout << chromosome << "\t" << i << "\t" << physicalWindowEnd << "\t";
-            for (int j = 0; j < fs.size() - 1; j++) {
-                print_vector(fs[j]->getMeanValuesForRegion(chromosome, i, physicalWindowEnd),std::cout,'\t',false);
-                std::cout << "\t";
+         //   if (i > 110000) {
+            if (ag->initialised) {
+                for (int j = 0; j < fs.size(); j++) {
+                    print_vector(fs[j]->getMeanValuesForRegion(chromosome, i, physicalWindowEnd),std::cout,'\t',false);
+                    std::cout << "\t";
+                }
+                int nAccessible = ag->getAccessibleBPinRegion(chromosome, i, physicalWindowEnd);
+                std::cout << nAccessible << std::endl;
+            } else {
+                for (int j = 0; j < fs.size() - 1; j++) {
+                    print_vector(fs[j]->getMeanValuesForRegion(chromosome, i, physicalWindowEnd),std::cout,'\t',false);
+                    std::cout << "\t";
+                }
+                print_vector(fs.back()->getMeanValuesForRegion(chromosome, i, physicalWindowEnd),std::cout,'\t',true);
             }
-            print_vector(fs.back()->getMeanValuesForRegion(chromosome, i, physicalWindowEnd),std::cout,'\t',true);
+       //     }
         }
     }
     

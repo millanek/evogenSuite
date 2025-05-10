@@ -37,23 +37,22 @@ void GeneralSetCounts::getSetVariantCounts(const std::vector<std::string>& genot
     //std::cerr << "Went through genotypes" << std::endl;
     
     
-    // it->second - A vector with all alleles for this species
-    for(std::map<string,std::vector<int>>::iterator it = setAlleles.begin(); it != setAlleles.end(); ++it) {
-        std::string species = it->first;
-        if(it->second.size() == 0) {        // Missing data for this set
+    // alleles - A vector with all alleles for this species
+    for (auto& [species, alleles] : setAlleles) {
+        if(alleles.size() == 0) {        // Missing data for this set
             setAAFs.at(species).push_back(-1);
             setRefCounts.at(species) = 0;
             setAltAlleleCounts.at(species).push_back(0);
         } else {
-            setRefCounts.at(species) = (int)std::count(it->second.begin(), it->second.end(), 0);
+            setRefCounts.at(species) = (int)std::count(alleles.begin(), alleles.end(), 0);
             for (int i = 1; i < v.SNPAlleleIndices.size(); i++) {
-                int thisAAcount = (int)std::count(it->second.begin(), it->second.end(), v.SNPAlleleIndices[i]);
+                int thisAAcount = (int)std::count(alleles.begin(), alleles.end(), v.SNPAlleleIndices[i]);
                 setAltAlleleCounts.at(species).push_back(thisAAcount);
-                double thisAAF = (double)thisAAcount/it->second.size();
+                double thisAAF = (double)thisAAcount/alleles.size();
                 setAAFs.at(species).push_back(thisAAF);
            //     std::cerr << "v.SNPaltAlleleIndices[i]" << v.SNPAlleleIndices[i] << std::endl;
            //     std::cerr << "thisAAcount" << thisAAcount << std::endl;
-           //     std::cerr << "it->second.size()" << it->second.size() << std::endl;
+           //     std::cerr << "alleles.size()" << alleles.size() << std::endl;
             }
         }
     }
@@ -86,9 +85,8 @@ void GeneralSetCounts::getAlternateAlleleFreqFromOutgroup(const std::vector<std:
 } */
 
 void GeneralSetCounts::calculatePiPerVariantPerSet() {
-    for(std::map<string,std::vector<int>>::iterator it = setAlleles.begin(); it != setAlleles.end(); ++it) {
-        string thisSet = it->first;
-        std::vector<int> thisSetAlleles = it->second;
+    
+    for (auto& [thisSet, thisSetAlleles] : setAlleles) {   
         int n = (int) thisSetAlleles.size();
         double pi = 0;
         if (n > 0) {
@@ -105,9 +103,8 @@ void GeneralSetCounts::calculatePiPerVariantPerSet() {
 }
 
 void GeneralSetCounts::calculateHeterozygosityPerVariantPerSet() {
-    for(std::map<string,int>::iterator it = setSNPPairCounts.begin(); it != setSNPPairCounts.end(); ++it) {
-        string thisSet = it->first;
-        int thisSetSNPpairs = it->second;
+
+    for (const auto& [thisSet, thisSetSNPpairs] : setSNPPairCounts) {
         int thisSetHets = setHetCounts.at(thisSet);
         double hetThisVar = (double)thisSetHets/(double)thisSetSNPpairs;
         
@@ -133,11 +130,11 @@ std::vector<double> GeneralSetCountsWithLikelihoods::probabilitiesFromLikelihood
 void GeneralSetCountsWithLikelihoods::setHWEpriorsFromAFfromGT() {
     double AF;
     // Alternative allele frequencies
-    for(std::map<string,std::vector<double>>::iterator it = setAAFs.begin(); it != setAAFs.end(); ++it) {
-        if (it->second[0] >= 0) AF = it->second[0]; else AF = averageFirstAAF; // This should be average of AFs across populations where it is known
-        setHWEpriorsFromAAFfromGT[it->first][0] = pow((1-AF),2);
-        setHWEpriorsFromAAFfromGT[it->first][1] = AF*(1-AF);
-        setHWEpriorsFromAAFfromGT[it->first][2] = pow(AF,2);
+    for (auto& [thisSet, aafVector] : setAAFs) {
+        if (aafVector[0] >= 0) AF = aafVector[0]; else AF = averageFirstAAF; // This should be average of AFs across populations where it is known
+        setHWEpriorsFromAAFfromGT[thisSet][0] = pow((1-AF),2);
+        setHWEpriorsFromAAFfromGT[thisSet][1] = AF*(1-AF);
+        setHWEpriorsFromAAFfromGT[thisSet][2] = pow(AF,2);
     }
  /*   // Derived allele frequencies
     for(std::map<string,double>::iterator it = setDAFs.begin(); it != setDAFs.end(); ++it) {

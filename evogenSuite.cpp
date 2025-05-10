@@ -86,7 +86,7 @@ static const char *USAGE_MESSAGE =
 "           CodingStats             Calculate statistics from a multiple sequence alignment of coding sequences\n"
 "           DistOutgroups           Calculate the distance between ingroups/outgroups in windows\n"
 "           Fst                     Calculating Fst values in windows and per-gene\n"
-"           GlobalPairs             Calculating global (e.g. genome-wide) statistics from a VCF file. Main output is a distance matrix.\n"
+"           GWstats                 Calculating genome-wide statistics from a VCF file. Main output is a distance matrix.\n"
 "           PaintFixed              Find the genotypes of hybrid individuals at sites fixed between source populations\n"
 "           PBS                     Calculating the Population Branch Statistics in windows and per-gene\n"
 "           PhysicalWindowAverages  Getting (weighted) averages of statistics in fixed physical windows (e.g. 1kb windows)\n"
@@ -122,6 +122,8 @@ int main(int argc, char **argv) {
         else if(command == "Fst")
             fstMain(argc - 1, argv + 1);
         else if(command == "GlobalPairs")
+            globalStatsMain(argc - 1, argv + 1);
+        else if(command == "GWstats")
             globalStatsMain(argc - 1, argv + 1);
         else if (command == "PaintFixed")
             PaintFixedMain(argc - 1, argv + 1);
