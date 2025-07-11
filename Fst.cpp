@@ -119,7 +119,6 @@ int fstMain(int argc, char** argv) {
             if (v.onlyIndel) continue; // Only consider SNPs
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             if(opt::physicalWindowSize > 0 && totalVariantNumber == 1) p.forwardToFirstPhysicalWindow(currentWindowStart,currentWindowEnd,v.chr, v.posInt, ag, r, opt::physicalWindowSize);
-            
             if (opt::physicalWindowSize > 0 && (v.posInt > currentWindowEnd || v.posInt < currentWindowStart)) {
                 for (int i = 0; i != p.getPairs().size(); i++) {
                     p.finalizeAndOutputPhysicalWindow(i, opt::physicalWindowSize, v.chr, v.posInt, ag, currentWindowStart, currentWindowEnd, r, opt::bZeroRounding);

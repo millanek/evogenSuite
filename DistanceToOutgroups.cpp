@@ -79,15 +79,24 @@ int DistOutMain(int argc, char** argv) {
         ingroups.push_back(line);
     }
     
-    // Get the outgroups
+    // Get the outgroups and prepare the output files
     std::vector<std::ofstream*> outFilesFixedWindow;
+    std::vector<std::ofstream*> outFilesFixedWindowMeanPi;
     while (getline(*outgroupFile,line)) {
-        // std::cerr << line << std::endl;
+        outgroups.push_back(line); // Add the outgroup to the list of outgroups
+        
+        // Prepare the output file for Dxy for this outgroup
         std::ofstream* outFileFixedWindow = new std::ofstream(line + "_DIST_" + opt::runName + "_FW" + numToString(opt::fixedWindowSize) + ".txt");
         *outFileFixedWindow << "chr\twStart\twEnd\tSNPs_used\tSNPs_missing\tAccessibleSizeBP" << "\t"; print_vector(ingroups, *outFileFixedWindow);
+
+        // Prepare the output file for Mean Pi for this outgroup
+        std::ofstream* outFileFixedWindowMeanPi = new std::ofstream(line + "_MEANPI_" + opt::runName + "_FW" + numToString(opt::fixedWindowSize) + ".txt");
+        *outFileFixedWindowMeanPi << "chr\twStart\twEnd\tSNPs_used\tSNPs_missing\tAccessibleSizeBP" << "\t"; print_vector(ingroups, *outFileFixedWindowMeanPi);
+
         //outFile->setf(std::ios_base::fixed); // Avoid scientific notation in the coordinates
         outFilesFixedWindow.push_back(outFileFixedWindow);
-        outgroups.push_back(line);
+        outFilesFixedWindowMeanPi.push_back(outFileFixedWindowMeanPi);
+
     }
     
     
@@ -98,6 +107,10 @@ int DistOutMain(int argc, char** argv) {
     // 3a) for per-SNP results
     std::vector<std::vector<double>> initVectorFixed(ingroups.size());
     std::vector<std::vector<std::vector<double>>> DxyFixedWindowPerSNP(outgroups.size(),initVectorFixed);
+    std::vector<std::vector<std::vector<double>>> MeanPiFixedWindowPerSNP(outgroups.size(),initVectorFixed);
+    // The initVectorFixed is initialized to have zeros in it, so we need to be careful not 
+    // to use it as a default value for the vectors in the DxyFixedWindowPerSNP and MeanPiFixedWindowPerSNP
+
     // 3b) for calculated Dxy values
     std::vector<int> ingroupsMissingInit(ingroups.size(),0);
     std::vector<std::vector<int>> missingDist(outgroups.size(),ingroupsMissingInit);
@@ -105,6 +118,7 @@ int DistOutMain(int argc, char** argv) {
     // 3b) for calculated Dxy values
     std::vector<double> ingroupsResultInit(ingroups.size(),0.0);
     std::vector<std::vector<double>> DxyFixedWindowAveraged(outgroups.size(),ingroupsResultInit);
+    std::vector<std::vector<double>> MeanPiFixedWindowAveraged(outgroups.size(),ingroupsResultInit);
     
     
     // 4) Going through the VCF
@@ -150,26 +164,32 @@ int DistOutMain(int argc, char** argv) {
                 
                 for (int i = 0; i != outgroups.size(); i++) {
                     for (int j = 0; j != ingroups.size(); j++) {
-                        int nSNPs = (int)DxyFixedWindowPerSNP[i][j].size();
-                        if (nSNPs > 0) {
-                            double missingProportion = (double)missingDist[i][j]/(nSNPs + missingDist[i][j]);
+                        int nSNPsForOutgroupIngroupPair = (int)DxyFixedWindowPerSNP[i][j].size();
+                        if (nSNPsForOutgroupIngroupPair > 0) {
+                            double missingProportion = (double)missingDist[i][j]/(nSNPsForOutgroupIngroupPair + missingDist[i][j]);
                             if (missingProportion > 0.5) {
                                 DxyFixedWindowAveraged[i][j] = NAN;
+                                MeanPiFixedWindowAveraged[i][j] = NAN;
                             } else {
                                 DxyFixedWindowAveraged[i][j] = vector_average_withRegion(DxyFixedWindowPerSNP[i][j], accessibleInThisWindow);
+                                MeanPiFixedWindowAveraged[i][j] = vector_average_withRegion(MeanPiFixedWindowPerSNP[i][j], accessibleInThisWindow);
                                 // Scale by the number of SNPs missing for the ingroup
-                                double nonMissingProportion = (double)nSNPs/(nSNPs + missingDist[i][j]);
+                                double nonMissingProportion = (double)nSNPsForOutgroupIngroupPair/(nSNPsForOutgroupIngroupPair + missingDist[i][j]);
                                 double scalingFactor = 1 + (missingProportion / nonMissingProportion);
                                 DxyFixedWindowAveraged[i][j] = DxyFixedWindowAveraged[i][j] * scalingFactor;
+                                MeanPiFixedWindowAveraged[i][j] = MeanPiFixedWindowAveraged[i][j] * scalingFactor;
                             }
                         } else {
                             DxyFixedWindowAveraged[i][j] = NAN;
+                            MeanPiFixedWindowAveraged[i][j] = NAN;
                         }
                         DxyFixedWindowPerSNP[i][j].clear();
                     }
                     
                     *outFilesFixedWindow[i] << v.chr << "\t" << currentWindowStart << "\t" << currentWindowEnd << "\t" << usedVars[i] << "\t" << missingVars[i] << "\t" << accessibleInThisWindow << "\t";
                     print_vector(DxyFixedWindowAveraged[i], *outFilesFixedWindow[i]);
+                    *outFilesFixedWindowMeanPi[i] << v.chr << "\t" << currentWindowStart << "\t" << currentWindowEnd << "\t" << usedVars[i] << "\t" << missingVars[i] << "\t" << accessibleInThisWindow << "\t";
+                    print_vector(MeanPiFixedWindowAveraged[i], *outFilesFixedWindowMeanPi[i]);
                 }
                 
                 // Reset missing data counters for the next window
@@ -203,6 +223,9 @@ int DistOutMain(int argc, char** argv) {
                 for (int j = 0; j != ingroups.size(); j++) {
                     double AFin = c->setAAFs.at(ingroups[j])[0];
                     if (AFin != -1) {
+                        double thisSNPpiIngroup = c->piPerVariantPerSet.at(ingroups[j]);
+                        double thisSNPpiOutgroup = c->piPerVariantPerSet.at(outgroups[i]);
+                        MeanPiFixedWindowPerSNP[i][j].push_back((thisSNPpiIngroup + thisSNPpiOutgroup) / 2.0);
                         double thisSNPdxy = DxyPerSNPfromAFs(AFout, AFin);
                         DxyFixedWindowPerSNP[i][j].push_back(thisSNPdxy);
                     } else {
