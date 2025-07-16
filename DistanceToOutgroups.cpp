@@ -148,6 +148,7 @@ int DistOutMain(int argc, char** argv) {
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
             c->getSetVariantCounts(genotypes, setInfo.posToPopMap, v);
+            c->calculatePiPerVariantPerSet();
             genotypes.clear(); genotypes.shrink_to_fit();
             
             // Check if we are still in the same physical window...
@@ -227,6 +228,7 @@ int DistOutMain(int argc, char** argv) {
                         double thisSNPpiOutgroup = c->piPerVariantPerSet.at(outgroups[i]);
                         MeanPiFixedWindowPerSNP[i][j].push_back((thisSNPpiIngroup + thisSNPpiOutgroup) / 2.0);
                         double thisSNPdxy = DxyPerSNPfromAFs(AFout, AFin);
+                        /// double thisSNPdxy = DxyPerSNPfromSetAlleles(c, outgroups[i], ingroups[j]);
                         DxyFixedWindowPerSNP[i][j].push_back(thisSNPdxy);
                     } else {
                         missingDist[i][j]++;
