@@ -16,22 +16,38 @@ void GeneralSetCounts::getSetVariantCounts(const std::vector<std::string>& genot
     // Go through the genotypes and record all SNP alleles
     for (std::vector<std::string>::size_type i = 0; i != genotypes.size(); i++) {
         if (genotypes[i][0] == '.' || genotypes[i][2] == '.') continue;
-        std::string species = posToSpeciesMap.at(i);
+        string species;
+        try {  species = posToSpeciesMap.at(i); } catch (const std::out_of_range& oor) { 
+            continue;   // If the species is not in the map, skip this genotype
+        }
         int firstAllele = genotypes[i][0] - '0'; int secondAllele = genotypes[i][2] - '0';
         bool firstAlleleSNP = false; bool secondAlleleSNP = false;
         if (std::find(v.SNPAlleleIndices.begin(), v.SNPAlleleIndices.end(), firstAllele) != v.SNPAlleleIndices.end()) {
-            setAlleles.at(species).push_back(firstAllele);
+            try { setAlleles.at(species).push_back(firstAllele); } catch (const std::out_of_range& oor) {
+                std::cerr << "Error: species " << species << " not found in setAlleles map." << std::endl;
+                exit(1);
+            }
             firstAlleleSNP = true;
         }
         if (std::find(v.SNPAlleleIndices.begin(), v.SNPAlleleIndices.end(), secondAllele) != v.SNPAlleleIndices.end()) {
-            setAlleles.at(species).push_back(secondAllele);
+            try { setAlleles.at(species).push_back(secondAllele); } catch (const std::out_of_range& oor) {
+                std::cerr << "Error: species " << species << " not found in setAlleles map." << std::endl;
+                exit(1);
+            }
             secondAlleleSNP = true;
         }
         
         // This is for calculating heterozygosity
         if (firstAlleleSNP && secondAlleleSNP) {
-            setSNPPairCounts.at(species)++;
-            if (firstAllele != secondAllele) setHetCounts.at(species)++;
+            try { setSNPPairCounts.at(species)++; } catch (const std::out_of_range& oor) {
+                std::cerr << "Error: species " << species << " not found in setSNPPairCounts map." << std::endl;
+                exit(1);
+            }
+            // If the alleles are different, this is a heterozygote
+            try { if (firstAllele != secondAllele) setHetCounts.at(species)++; } catch (const std::out_of_range& oor) {
+                std::cerr << "Error: species " << species << " not found in setHetCounts map." << std::endl;
+                exit(1);
+            }
         }
     }
     //std::cerr << "Went through genotypes" << std::endl;

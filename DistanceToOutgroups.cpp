@@ -142,14 +142,17 @@ int DistOutMain(int argc, char** argv) {
         } else {
             totalVariantNumber++;
             if (totalVariantNumber % reportProgressEvery == 0) reportProgessVCF(totalVariantNumber, startTime);
-    
+            
+       //     std::cout << "Processing variant " << totalVariantNumber << std::endl;
             fields = split(line, '\t');
             VariantInfo v(fields); if (v.onlyIndel) continue; // Only consider SNPs
             std::vector<std::string> genotypes(fields.begin()+NUM_NON_GENOTYPE_COLUMNS,fields.end());
             GeneralSetCounts* c = new GeneralSetCounts(setInfo.popToPosMap, (int)genotypes.size());
             c->getSetVariantCounts(genotypes, setInfo.posToPopMap, v);
+        //    std::cout << "Done getting counts for variant " << totalVariantNumber << std::endl;
             c->calculatePiPerVariantPerSet();
             genotypes.clear(); genotypes.shrink_to_fit();
+           // std::cout << "Done calculating pi for variant " << totalVariantNumber << std::endl;
             
             // Check if we are still in the same physical window...
             if (v.posInt > currentWindowEnd || v.posInt < currentWindowStart) {
