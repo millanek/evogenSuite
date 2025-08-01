@@ -188,6 +188,7 @@ int DistOutMain(int argc, char** argv) {
                             MeanPiFixedWindowAveraged[i][j] = NAN;
                         }
                         DxyFixedWindowPerSNP[i][j].clear();
+                        MeanPiFixedWindowPerSNP[i][j].clear();
                     }
                     
                     *outFilesFixedWindow[i] << v.chr << "\t" << currentWindowStart << "\t" << currentWindowEnd << "\t" << usedVars[i] << "\t" << missingVars[i] << "\t" << accessibleInThisWindow << "\t";
